@@ -6,7 +6,7 @@
 CC      = gcc
 
 CFLAGS  = -pipe -Wall -Os
-LDFLAGS = -lcurl
+LDFLAGS = -lcurl -lcrypto
 
 OBJS    = main.o libscrobbler2.o server.o
 PROG    = cmusfm
