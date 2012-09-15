@@ -12,7 +12,7 @@ OBJS    = main.o libscrobbler2.o server.o
 PROG    = cmusfm
 
 $(PROG): $(OBJS)
-	$(CC) $(LDFLAGS) $(OBJS) -o $(PROG)
+	$(CC) -o $(PROG) $(OBJS) $(LDFLAGS)
 
 %.o: src/%.c
 	$(CC) $(CFLAGS) -c $<

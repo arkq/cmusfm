@@ -1,6 +1,6 @@
 /*
     cmusfm - server.c
-    Copyright (c) 2010-2011 Arkadiusz Bokowy
+    Copyright (c) 2010-2012 Arkadiusz Bokowy
 */
 
 #include <unistd.h>
@@ -18,7 +18,7 @@ void dump_scrobbler_(const char *info, const scrobbler_trackinfo_t *sb_tinf)
 {
 	printf("--= %s =--\n", info);
 	printf(" timestamp: %d duration: %ds MbID: %s\n",
-			sb_tinf->timestamp, sb_tinf->duration, sb_tinf->mbid);
+			(int)sb_tinf->timestamp, sb_tinf->duration, sb_tinf->mbid);
 	printf(" %s - %s (%s) - %02d. %s\n", sb_tinf->artist, sb_tinf->album,
 			sb_tinf->album_artist, sb_tinf->track_number, sb_tinf->track);
 	fflush(stdout);
@@ -78,6 +78,9 @@ void submit_cache(scrobbler_session_t *sbs)
 		for(record = rd_buff;;) {
 			rec_size = *((int*)record);
 
+			// break if current record is truncated
+			if(record - (void*)rd_buff + rec_size > rd_len) break;
+
 			memcpy(&sb_tinf, record + sizeof(int), sizeof(sb_tinf));
 			sb_tinf.artist = record + sizeof(int) + sizeof(sb_tinf);
 			sb_tinf.track = &sb_tinf.artist[strlen(sb_tinf.artist) + 1];
@@ -93,15 +96,14 @@ void submit_cache(scrobbler_session_t *sbs)
 			// point to next record
 			record += rec_size;
 
-			// break if there is no more data in buffer
-			if(record - (void*)rd_buff >= rd_len) break;
+			// break if there is no enough data to obtain the record size
+			if(record - (void*)rd_buff + sizeof(int) > rd_len) break;
 		}
 
 		if(record - (void*)rd_buff != rd_len)
 			// seek to the beginning of current record, because
 			// it is truncated, so we have to read it one more time
-			lseek(fd, (int)(record - (void*)rd_buff) - rec_size
-					- rd_len, SEEK_CUR);
+			lseek(fd, record - (void*)rd_buff - rd_len, SEEK_CUR);
 	}
 
 	close(fd);
@@ -265,8 +267,8 @@ int run_server()
 	submit_radio = cm_conf->submit_radio;
 	free(cm_conf);
 
-	// fork server into background
 #ifndef DEBUG
+	// fork server into background
 	if(fork() != 0) return 0; //run only child process
 #endif
 
@@ -311,4 +313,3 @@ void fill_trackinfo(scrobbler_trackinfo_t *sbt, const struct sock_data_tag *dt)
 	sbt->track_number = dt->tracknb;
 	sbt->duration = dt->duration;
 }
-

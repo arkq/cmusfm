@@ -1,6 +1,6 @@
 /*
   cmusfm - main.c
-  Copyright (c) 2010-2011 Arkadiusz Bokowy
+  Copyright (c) 2010-2012 Arkadiusz Bokowy
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 
   ** Note: **
   For contact information and the latest version of this program see
-  my webpage <http://arkq.awardspace.us/projects/cmusfm.html>.
+  my webpage <http://arkq.awardspace.us/Multimedia/cmusfm/>.
 
 */
 
@@ -43,6 +43,9 @@ int main(int argc, char *argv[])
 
 	if(argc == 1){ //print help
 		printf("usage: " APP_NAME " [init]\n\n"
+#ifdef DEBUG
+"  server\trun server in the debug mode\n"
+#endif
 "  init\t\tset/change scrobbler settings\n\n"
 "NOTE: Before usage with cmus you MUST invoke this program with 'init'\n"
 "      argument. After that you can set status_display_program in cmus\n"
@@ -58,6 +61,11 @@ int main(int argc, char *argv[])
 	switch(parse_argv(&ti, argc, argv)){
 	case 1: return run_server();
 	case 2: return send_data_to_server(&ti);}
+
+#ifdef DEBUG
+	if(argc == 2 && strcmp(argv[1], "server") == 0)
+		return run_server();
+#endif
 
 	printf("Run it again without any arguments ;)\n");
 	return 0;

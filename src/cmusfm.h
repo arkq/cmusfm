@@ -1,10 +1,10 @@
 /*
     cmusfm - cmusfm.h
-    Copyright (c) 2010-2011 Arkadiusz Bokowy
+    Copyright (c) 2010-2012 Arkadiusz Bokowy
 */
 
 #define APP_NAME "cmusfm"
-#define APP_VER "0.1.0"
+#define APP_VER "0.1.2"
 
 #define __CMUSFM_H
 
