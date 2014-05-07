@@ -1,25 +1,22 @@
 /*
-  cmusfm - libscrobbler2.c
-  Copyright (c) 2011 Arkadiusz Bokowy
-
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  If you want to read full version of the GNU General Public License
-  see <http://www.gnu.org/licenses/>.
-
-  ** Note: **
-  For contact information and the latest version of this program see
-  my webpage <http://arkq.awardspace.us/projects/cmusfm.html>.
-
-*/
+ * cmusfm - libscrobbler2.c
+ * Copyright (c) 2011-2014 Arkadiusz Bokowy
+ *
+ * This file is a part of a cmusfm.
+ *
+ * cmusfm is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * cmusfm is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * If you want to read full version of the GNU General Public License
+ * see <http://www.gnu.org/licenses/>.
+ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -29,42 +26,89 @@
 #include <openssl/md5.h>
 #include "libscrobbler2.h"
 
-char *mem2hex(const unsigned char *mem, int len, char *str);
-unsigned char *hex2mem(const char *str, int len, unsigned char *mem);
 
-char sb_srv_response[512]; //buffer for GET/POST server response
+// used as a buffer for GET/POST server response
+struct sb_response_data {
+	char *data;
+	int len;
+};
 
-// used for quick url and signature creation process
+// used for quick URL and signature creation process
 struct sb_getpost_data {
-	char *name, data_format;
+	char *name;
+	char data_format;
 	void *data;
 };
 
-// curl write callback function
-static size_t sb_write_callback(void *ptr, size_t size, size_t nmemb,
-		void *stream)
+char *mem2hex(const unsigned char *mem, int len, char *str);
+unsigned char *hex2mem(const char *str, int len, unsigned char *mem);
+
+
+// CURL write callback function.
+static size_t sb_curl_write_callback(char *ptr, size_t size, size_t nmemb,
+		void *data)
 {
-	char *data_ptr;
+	struct sb_response_data *resp = (struct sb_response_data*)data;
+	int len = size * nmemb;
 
-	// strip <?xml ...?> tag if exists
-	if(memcmp(ptr, "<?xml ", 6) != 0) data_ptr = ptr;
-	else data_ptr = strstr(ptr, "?>") + 2;
-
-	memset(sb_srv_response, 0, sizeof(sb_srv_response));
-	strncpy(sb_srv_response, data_ptr, sizeof(sb_srv_response) - 1);
-	return size*nmemb;
+	resp->data = realloc(resp->data, resp->len + len + 1);
+	memcpy(&resp->data[resp->len], ptr, len);
+	resp->len += len;
+	resp->data[resp->len] = 0;
+	return len;
 }
 
-// Check scrobble API response status (and curl itself)
-int sb_check_response(scrobbler_session_t *sbs, int curl_status)
+// Initialize CURL handler for internal usage.
+CURL *sb_curl_init(CURLoption method, struct sb_response_data *response)
 {
-	if(curl_status != 0){ //network transfer failure (curl error)
-		sbs->error_code = curl_status;
-		return SCROBBERR_CURLPERF;}
-	if(strstr(sb_srv_response, "status=\"ok\"") == NULL){ //scrobbler failure
-		sbs->error_code = atoi(strstr(sb_srv_response, "<error code=") + 13);
-		return SCROBBERR_SBERROR;}
+	CURL *curl;
 
+	if((curl = curl_easy_init()) == NULL)
+		return NULL;
+
+#ifdef CURLOPT_PROTOCOLS
+	curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
+#endif
+	curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
+
+	curl_easy_setopt(curl, method, 1);
+
+	memset(response, 0, sizeof(*response));
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, sb_curl_write_callback);
+
+	return curl;
+}
+
+// Cleanup CURL handler and free allocated response buffer.
+void sb_curl_cleanup(CURL *curl, struct sb_response_data *response)
+{
+	curl_easy_cleanup(curl);
+	free(response->data);
+}
+
+// Check scrobble API response status (and curl itself).
+int sb_check_response(struct sb_response_data *response, int curl_status,
+		scrobbler_session_t *sbs)
+{
+	char *ptr;
+
+	if(curl_status != 0) {
+		// network transfer failure (curl error)
+		sbs->error_code = curl_status;
+		return SCROBBERR_CURLPERF;
+	}
+	if(strstr(response->data, "<lfm status=\"ok\"") == NULL) {
+		// scrobbler service failure
+		ptr = strstr(response->data, "<error code=");
+		if(ptr) sbs->error_code = atoi(ptr + 13);
+		else
+			// error code was not found in the response, so maybe we are calling
+			// wrong service... set error code as value not used by the Last.fm
+			sbs->error_code = 1;
+		return SCROBBERR_SBERROR;
+	}
 	return 0;
 }
 
@@ -127,6 +171,7 @@ int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt)
 	char session_key_hex[sizeof(sbs->session_key)*2 + 1];
 	char sign_hex[sizeof(sign)*2 + 1];
 	char post_data[2048];
+	struct sb_response_data response;
 
 	// data in alphabetical order sorted by name field (except api_sig)
 	struct sb_getpost_data sb_data[] = {
@@ -135,29 +180,21 @@ int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt)
 		{"api_key", 's', api_key_hex},
 		{"artist", 's', sbt->artist},
 		//{"context", 's', NULL},
-		{"duration", 'd', (void*)sbt->duration},
+		{"duration", 'd', (void*)(long)sbt->duration},
 		{"mbid", 's', sbt->mbid},
 		{"method", 's', "track.scrobble"},
 		{"sk", 's', session_key_hex},
 		{"timestamp", 'd', (void*)sbt->timestamp},
 		{"track", 's', sbt->track},
-		{"trackNumber", 'd', (void*)sbt->track_number},
+		{"trackNumber", 'd', (void*)(long)sbt->track_number},
 		//{"streamId", 's', NULL},
 		{"api_sig", 's', sign_hex}};
 
 	if(sbt->artist == NULL || sbt->track == NULL || sbt->timestamp == 0)
 		return SCROBBERR_TRACKINF;
 
-	// initialize curl
-	if((curl = curl_easy_init()) == NULL) return SCROBBERR_CURLINIT;
-#ifdef CURLOPT_PROTOCOLS
-	curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
-#endif
-	curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-	curl_easy_setopt(curl, CURLOPT_POST, 1);
-	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, sb_write_callback);
-	curl_easy_setopt(curl, CURLOPT_URL, SCROBBLER_URL);
+	if((curl = sb_curl_init(CURLOPT_POST, &response)) == NULL)
+		return SCROBBERR_CURLINIT;
 
 	mem2hex(sbs->api_key, sizeof(sbs->api_key), api_key_hex);
 	mem2hex(sbs->session_key, sizeof(sbs->session_key), session_key_hex);
@@ -169,10 +206,12 @@ int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt)
 	// make track.updateNowPlaying POST request
 	sb_make_curl_getpost_string(curl, post_data, sb_data, 12);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
+	curl_easy_setopt(curl, CURLOPT_URL, SCROBBLER_URL);
 	status = curl_easy_perform(curl);
+	status = sb_check_response(&response, status, sbs);
 
-	curl_easy_cleanup(curl);
-	return sb_check_response(sbs, status);
+	sb_curl_cleanup(curl, &response);
+	return status;
 }
 
 // Notify Last.fm that a user has started listening to a track.
@@ -187,6 +226,7 @@ int sb_update_now_playing(scrobbler_session_t *sbs,
 	char session_key_hex[sizeof(sbs->session_key)*2 + 1];
 	char sign_hex[sizeof(sign)*2 + 1];
 	char post_data[2048];
+	struct sb_response_data response;
 
 	// data in alphabetical order sorted by name field (except api_sig)
 	struct sb_getpost_data sb_data[] = {
@@ -195,24 +235,16 @@ int sb_update_now_playing(scrobbler_session_t *sbs,
 		{"api_key", 's', api_key_hex},
 		{"artist", 's', sbt->artist},
 		//{"context", 's', NULL},
-		{"duration", 'd', (void*)sbt->duration},
+		{"duration", 'd', (void*)(long)sbt->duration},
 		{"mbid", 's', sbt->mbid},
 		{"method", 's', "track.updateNowPlaying"},
 		{"sk", 's', session_key_hex},
 		{"track", 's', sbt->track},
-		{"trackNumber", 'd', (void*)sbt->track_number},
+		{"trackNumber", 'd', (void*)(long)sbt->track_number},
 		{"api_sig", 's', sign_hex}};
 
-	// initialize curl
-	if((curl = curl_easy_init()) == NULL) return SCROBBERR_CURLINIT;
-#ifdef CURLOPT_PROTOCOLS
-	curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
-#endif
-	curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-	curl_easy_setopt(curl, CURLOPT_POST, 1);
-	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, sb_write_callback);
-	curl_easy_setopt(curl, CURLOPT_URL, SCROBBLER_URL);
+	if((curl = sb_curl_init(CURLOPT_POST, &response)) == NULL)
+		return SCROBBERR_CURLINIT;
 
 	mem2hex(sbs->api_key, sizeof(sbs->api_key), api_key_hex);
 	mem2hex(sbs->session_key, sizeof(sbs->session_key), session_key_hex);
@@ -224,11 +256,15 @@ int sb_update_now_playing(scrobbler_session_t *sbs,
 	// make track.updateNowPlaying POST request
 	sb_make_curl_getpost_string(curl, post_data, sb_data, 11);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
+	curl_easy_setopt(curl, CURLOPT_URL, SCROBBLER_URL);
 	status = curl_easy_perform(curl);
+	status = sb_check_response(&response, status, sbs);
 
-	curl_easy_cleanup(curl);
-	return sb_check_response(sbs, status);
+	sb_curl_cleanup(curl, &response);
+	return status;
 }
+
+// Update "Now playing" notification.
 int scrobbler_update_now_playing(scrobbler_session_t *sbs,
 		scrobbler_trackinfo_t *sbt)
 {
@@ -237,8 +273,9 @@ int scrobbler_update_now_playing(scrobbler_session_t *sbs,
 	return sb_update_now_playing(sbs, sbt);
 }
 
-// Hard codded method for validating session key. Use updateNotify method
-// call with wrong number of parameters as test call.
+// Hard-codded method for validating session key. This approach uses the
+// updateNotify method call with the wrong number of parameters as a test
+// call.
 int scrobbler_test_session_key(scrobbler_session_t *sbs)
 {
 	scrobbler_trackinfo_t sbt;
@@ -252,17 +289,20 @@ int scrobbler_test_session_key(scrobbler_session_t *sbs)
 	else return status;
 }
 
-// Return session key in string hex dump. The memory block to which points
+// Return session key in string hex dump. The memory block pointed by the
 // *str has to be big enough to contain sizeof(session_key)*2 + 1.
-char *scrobbler_get_session_key_str(scrobbler_session_t *sbs, char *str) {
+char *scrobbler_get_session_key_str(scrobbler_session_t *sbs, char *str)
+{
 	return mem2hex(sbs->session_key, sizeof(sbs->session_key), str);
 }
-// Set session key by parsing hex dump of this key.
-void scrobbler_set_session_key_str(scrobbler_session_t *sbs, const char *str) {
+
+// Set session key by parsing the hex dump of this key.
+void scrobbler_set_session_key_str(scrobbler_session_t *sbs, const char *str)
+{
 	hex2mem(str, sizeof(sbs->session_key), sbs->session_key);
 }
 
-// Perform scrobbler service authentication process
+// Perform scrobbler service authentication process.
 int scrobbler_authentication(scrobbler_session_t *sbs,
 		scrobbler_authuser_callback_t callback)
 {
@@ -272,6 +312,7 @@ int scrobbler_authentication(scrobbler_session_t *sbs,
 	char api_key_hex[sizeof(sbs->api_key)*2 + 1];
 	char sign_hex[sizeof(sign)*2 + 1], token_hex[33];
 	char get_url[1024], *ptr;
+	struct sb_response_data response;
 
 	// data in alphabetical order sorted by name field (except api_sig)
 	struct sb_getpost_data sb_data_token[] = {
@@ -284,17 +325,10 @@ int scrobbler_authentication(scrobbler_session_t *sbs,
 		{"token", 's', token_hex},
 		{"api_sig", 's', sign_hex}};
 
-	mem2hex(sbs->api_key, sizeof(sbs->api_key), api_key_hex);
+	if((curl = sb_curl_init(CURLOPT_HTTPGET, &response)) == NULL)
+		return SCROBBERR_CURLINIT;
 
-	// initialize curl
-	if((curl = curl_easy_init()) == NULL) return SCROBBERR_CURLINIT;
-#ifdef CURLOPT_PROTOCOLS
-	curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
-#endif
-	curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-	curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
-	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, sb_write_callback);
+	mem2hex(sbs->api_key, sizeof(sbs->api_key), api_key_hex);
 
 	// make signature for auth.getToken API call
 	sb_generate_method_signature(sb_data_token, 2, sbs->secret, sign);
@@ -305,43 +339,51 @@ int scrobbler_authentication(scrobbler_session_t *sbs,
 	sb_make_curl_getpost_string(curl, get_url + strlen(get_url), sb_data_token, 3);
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 	status = curl_easy_perform(curl);
+	status = sb_check_response(&response, status, sbs);
 
-	if((status = sb_check_response(sbs, status)) != 0){
-		curl_easy_cleanup(curl);
-		return status;}
+	if(status != 0) {
+		sb_curl_cleanup(curl, &response);
+		return status;
+	}
 
-	memcpy(token_hex, strstr(sb_srv_response, "<token>") + 7, 32);
+	memcpy(token_hex, strstr(response.data, "<token>") + 7, 32);
 	token_hex[32] = 0;
 
 	// perform user authorization (callback function)
 	sprintf(get_url, SCROBBLER_USERAUTH_URL "?api_key=%s&token=%s",
 			api_key_hex, token_hex);
-	if(callback(get_url) != 0){
-		curl_easy_cleanup(curl);
-		return SCROBBERR_CALLBACK;}
+	if(callback(get_url) != 0) {
+		sb_curl_cleanup(curl, &response);
+		return SCROBBERR_CALLBACK;
+	}
 	
 	// make signature for auth.getSession API call
 	sb_generate_method_signature(sb_data_session, 3, sbs->secret, sign);
 	mem2hex(sign, sizeof(sign), sign_hex);
+
+	// reinitialize response buffer
+	response.len = 0;
 
 	// make auth.getSession GET request
 	strcpy(get_url, SCROBBLER_URL "?");
 	sb_make_curl_getpost_string(curl, get_url + strlen(get_url), sb_data_session, 4);
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 	status = curl_easy_perform(curl);
+	status = sb_check_response(&response, status, sbs);
 
-	// we can free it now, it's not needed any more
-	curl_easy_cleanup(curl);
+	if(status != 0) {
+		sb_curl_cleanup(curl, &response);
+		return status;
+	}
 
-	if((status = sb_check_response(sbs, status)) != 0) return status;
-
-	strncpy(sbs->user_name, strstr(sb_srv_response, "<name>") + 6,
+	strncpy(sbs->user_name, strstr(response.data, "<name>") + 6,
 			sizeof(sbs->user_name));
 	sbs->user_name[sizeof(sbs->user_name) - 1] = 0;
 	if((ptr = strchr(sbs->user_name, '<')) != NULL) *ptr = 0;
-	memcpy(get_url, strstr(sb_srv_response, "<key>") + 5, 32);
+	memcpy(get_url, strstr(response.data, "<key>") + 5, 32);
 	hex2mem(get_url, sizeof(sbs->session_key), sbs->session_key);
 
+	sb_curl_cleanup(curl, &response);
 	return 0;
 }
 
@@ -357,8 +399,10 @@ scrobbler_session_t *scrobbler_initialize(uint8_t api_key[16],
 	if((sbs = calloc(1, sizeof(scrobbler_session_t))) == NULL)
 		return NULL;
 
-	if(curl_global_init(CURL_GLOBAL_NOTHING) != 0){
-		free(sbs); return NULL;}
+	if(curl_global_init(CURL_GLOBAL_NOTHING) != 0) {
+		free(sbs);
+		return NULL;
+	}
 
 	memcpy(sbs->api_key, api_key, sizeof(sbs->api_key));
 	memcpy(sbs->secret, secret, sizeof(sbs->secret));
@@ -395,10 +439,10 @@ unsigned char *hex2mem(const char *str, int len, unsigned char *mem)
 
 	for(x = 0; x < len; x++) {
 		if(isdigit(str[x*2])) mem[x] = (str[x*2] - '0') << 4;
-		else mem[x] = (toupper(str[x*2]) - 'A' + 10) << 4;
+		else mem[x] = (tolower(str[x*2]) - 'a' + 10) << 4;
 
 		if(isdigit(str[x*2 + 1])) mem[x] += str[x*2 + 1] - '0';
-		else mem[x] += toupper(str[x*2 + 1]) - 'A' + 10;
+		else mem[x] += tolower(str[x*2 + 1]) - 'a' + 10;
 	}
 
 	return mem;
