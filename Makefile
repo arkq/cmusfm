@@ -8,7 +8,7 @@ CC      = gcc
 CFLAGS  = -pipe -Wall -Os
 LDFLAGS = -lcurl -lcrypto
 
-OBJS    = main.o libscrobbler2.o server.o
+OBJS    = main.o config.o libscrobbler2.o server.o cache.o
 PROG    = cmusfm
 
 $(PROG): $(OBJS)

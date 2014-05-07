@@ -21,6 +21,7 @@
  *   http://www.last.fm/api/scrobbling
  */
 
+#ifndef __LIBSCROBBLER20_H
 #define __LIBSCROBBLER20_H
 
 #include <stdint.h>
@@ -67,3 +68,5 @@ void scrobbler_set_session_key_str(scrobbler_session_t *sbs, const char *str);
 int scrobbler_update_now_playing(scrobbler_session_t *sbs,
 		scrobbler_trackinfo_t *sbt);
 int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt);
+
+#endif

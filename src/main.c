@@ -18,159 +18,26 @@
  * see <http://www.gnu.org/licenses/>.
  */
 
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <sys/un.h>        /* sockaddr_un */
-#include "libscrobbler2.h"
+#include <regex.h>
 #include "cmusfm.h"
+#include "config.h"
+#include "server.h"
 
+
+// Last.fm API key for cmusfm
 unsigned char SC_api_key[16] = {0x67, 0x08, 0x2e, 0x45, 0xda, 0xb1,
 		0xf6, 0x43, 0x3d, 0xa7, 0x2a, 0x00, 0xe3, 0xbc, 0x03, 0x7a};
 unsigned char SC_secret[16] = {0x02, 0xfc, 0xbc, 0x90, 0x34, 0x1a,
 		0x01, 0xf2, 0x1c, 0x3b, 0xfc, 0x05, 0xb6, 0x36, 0xe3, 0xae};
 
-int main(int argc, char *argv[])
-{
-	struct cmtrack_info ti;
+// Global configuration structure
+struct cmusfm_config config;
 
-	if(argc == 1){ //print help
-		printf("usage: " APP_NAME " [init]\n\n"
-#ifdef DEBUG
-"  server\trun server in the debug mode\n"
-#endif
-"  init\t\tset/change scrobbler settings\n\n"
-"NOTE: Before usage with cmus you MUST invoke this program with 'init'\n"
-"      argument. After that you can set status_display_program in cmus\n"
-"      (for more informations see 'man cmus'). Enjoy!\n");
-		return 0;}
 
-	if(argc == 2 && strcmp(argv[1], "init") == 0)
-		return cmusfm_initialization();
-
-	memset(&ti, 0, sizeof(ti));
-	cmusfm_socket_sanity_check();
-
-	switch(parse_argv(&ti, argc, argv)){
-	case 1: return run_server();
-	case 2: return send_data_to_server(&ti);}
-
-#ifdef DEBUG
-	if(argc == 2 && strcmp(argv[1], "server") == 0)
-		return run_server();
-#endif
-
-	printf("Run it again without any arguments ;)\n");
-	return 0;
-}
-
-// Send track info to server instance.
-// If playing from stream guess format: '$ARTIST - $TITLE'
-int send_data_to_server(struct cmtrack_info *tinf)
-{
-	struct cmusfm_config cm_conf;
-	struct sock_data_tag *sock_data = (struct sock_data_tag*)sock_buff;
-	struct sockaddr_un sock_a;
-	char *album, *artist, *title;
-	char *ptr;
-	int sock;
-
-	// read configurations
-	if(read_cmusfm_config(&cm_conf) != 0) return -1;
-
-	// check if server is running
-	memset(&sock_a, 0, sizeof(sock_a));
-	sprintf(sock_a.sun_path, "%s/" SOCKET_FNAME , get_cmus_home_dir());
-	if(access(sock_a.sun_path, R_OK) != 0) return -1;
-
-	// connect to communication socket (no error check - if socket file is
-	// created we assumed that everything should be OK)
-	sock_a.sun_family = AF_UNIX;
-	sock = socket(PF_UNIX, SOCK_STREAM, 0);
-	connect(sock, (struct sockaddr*)(&sock_a), sizeof(sock_a));
-
-	memset(sock_buff, 0, sizeof(sock_buff));
-
-	// load data into sock container
-	sock_data->status = tinf->status;
-	sock_data->tracknb = tinf->tracknb;
-	// if no duration time assume 3 min
-	sock_data->duration = tinf->duration == 0 ? 180 : tinf->duration;
-
-	// add Shoutcast (stream) flag
-	if(tinf->url != NULL) sock_data->status |= CMSTATUS_SHOUTCASTMASK;
-
-	album = (char *)(sock_data + 1);
-	if(tinf->album != NULL) strcpy(album, tinf->album);
-	artist = &album[strlen(album) + 1];
-
-	if(tinf->url != NULL && tinf->artist == NULL && tinf->title != NULL) {
-		// URL: try to fetch artist and track tile form 'title' field
-		if((ptr = strstr(tinf->title, " - ")) == NULL)
-			goto normal_case;
-
-		*ptr = 0; //terminate artist tag
-		strcpy(artist, tinf->title);
-		title = &artist[strlen(artist) + 1];
-		strcpy(title, &ptr[3]);
-	}
-	else if(tinf->file != NULL && tinf->artist == NULL
-			&& tinf->title == NULL && cm_conf.parse_file_name) {
-		// FILE: try to fetch artist and track title from 'file' field
-
-		// strip PATH segment from 'file' field
-		if((ptr = strrchr(tinf->file, '/')) != NULL) ptr++;
-		else ptr = tinf->file;
-
-		strcpy(artist, ptr);
-		if((ptr = strstr(artist, " - ")) == NULL)
-			goto normal_case;
-
-		*ptr = 0; //terminate artist tag
-		title = &artist[strlen(artist) + 1];
-		strcpy(title, &ptr[3]);
-
-		// strip file extension (everything after last dot)
-		if((ptr = strrchr(title, '.')) != NULL) *ptr = 0;
-	}
-	else { //no title and artist guessing
-normal_case:
-		if(tinf->artist != NULL) strcpy(artist, tinf->artist);
-		title = &artist[strlen(artist) + 1];
-		if(tinf->title != NULL) strcpy(title, tinf->title);
-	}
-
-	// calculate data offsets
-	sock_data->artoff = artist - album;
-	sock_data->titoff = title - album;
-
-	write(sock, sock_buff, sizeof(struct sock_data_tag)
-			+ sock_data->titoff + strlen(title) + 1);
-	return close(sock);
-}
-
-// Check if behind our socket is server, if not remove socket node.
-void cmusfm_socket_sanity_check()
-{
-	struct sockaddr_un sock_a;
-	int sock;
-
-	memset(&sock_a, 0, sizeof(sock_a));
-	sock_a.sun_family = AF_UNIX;
-	sprintf(sock_a.sun_path, "%s/" SOCKET_FNAME , get_cmus_home_dir());
-
-	// if there is connection failure try to remove socket node
-	sock = socket(PF_UNIX, SOCK_STREAM, 0);
-	if(connect(sock, (struct sockaddr*)(&sock_a), sizeof(sock_a)) == -1)
-		unlink(sock_a.sun_path);
-
-	close(sock);
-}
-
+// Helper function for retrieving cmus configuration home path.
 char *get_cmus_home_dir()
 {
 	static char fname[128];
@@ -178,142 +45,222 @@ char *get_cmus_home_dir()
 	return fname;
 }
 
-// Parse arguments which we've get from cmus
-int parse_argv(struct cmtrack_info *tinf, int argc, char *argv[])
+// Get track information substrings from the given string. Matching is
+// done according to the provided format, which is a ERE pattern with
+// customized placeholders. Placeholder is defined as a marked
+// subexpression with the `?X` marker, where X can be one the following
+// characters: A - artist, B - album, T - title, N - track number
+// E.g.: ^(?A.+) - (?N[:digits:]+)\. (?T.+)$
+// In order to get a single match structure, one should use `get_regexp_match`
+// function. When matches are not longer needed, is should be freed by the
+// standard `free` function. When something goes wrong, NULL is returned.
+struct format_match *get_regexp_format_matches(const char *str, const char *format)
 {
-	int x;
+#define MATCHES_SIZE FORMAT_MATCH_TYPE_COUNT + 1
+	struct format_match *matches;
+	const char *p = format;
+	char *regexp;
+	int status, i = 0;
+	regex_t regex;
+	regmatch_t regmatch[MATCHES_SIZE];
 
-	for(x = 1; x + 1 < argc; x += 2) {
-		if(strcmp(argv[x], "status") == 0) {
-			if(strcmp(argv[x + 1], "playing") == 0)
-				tinf->status = CMSTATUS_PLAYING;
-			else if(strcmp(argv[x + 1], "paused") == 0)
-				tinf->status = CMSTATUS_PAUSED;
-			else if(strcmp(argv[x + 1], "stopped") == 0)
-				tinf->status = CMSTATUS_STOPPED;
-		}
-		else if(strcmp(argv[x], "file") == 0)
-			tinf->file = argv[x + 1];
-		else if(strcmp(argv[x], "url") == 0)
-			tinf->url = argv[x + 1];
-		else if(strcmp(argv[x], "artist") == 0)
-			tinf->artist = argv[x + 1];
-		else if(strcmp(argv[x], "album") == 0)
-			tinf->album = argv[x + 1];
-		else if(strcmp(argv[x], "tracknumber") == 0)
-			tinf->tracknb = atoi(argv[x + 1]);
-		else if(strcmp(argv[x], "title") == 0)
-			tinf->title = argv[x + 1];
-		else if(strcmp(argv[x], "duration") == 0)
-			tinf->duration = atoi(argv[x + 1]);
-//		else if(strcmp(argv[x], "date") == 0)
-//			tinf->date = atoi(argv[x + 1]);
+	// allocate memory for up to FORMAT_MATCH_TYPE_COUNT matches
+	// with one extra always empty terminating structure
+	matches = (struct format_match*)calloc(MATCHES_SIZE, sizeof(*matches));
+
+	regexp = strdup(format);
+	while(++i < MATCHES_SIZE && (p = strstr(p, "(?"))) {
+		p += 3;
+		matches[i - 1].type = p[-1];
+		strcpy(&regexp[p - format - i * 2], p);
 	}
 
-	if(tinf->status == 0) return -1;
+	status = regcomp(&regex, regexp, REG_EXTENDED | REG_ICASE);
+	free(regexp);
+	if(status) {
+		free(matches);
+		return NULL;
+	}
 
-	// check required fields - verify cmus program invocation
-	if(tinf->file != NULL || tinf->url != NULL) return 2;
+	status = regexec(&regex, str, MATCHES_SIZE, regmatch, 0);
+	regfree(&regex);
+	if(status) {
+		free(matches);
+		return NULL;
+	}
 
-	// initial run -> start server
+	for(i = 1; i < MATCHES_SIZE; i++) {
+		matches[i - 1].data = &str[regmatch[i].rm_so];
+		matches[i - 1].len = regmatch[i].rm_eo - regmatch[i].rm_so;
+	}
+	return matches;
+}
+
+// Return pointer to the single format match structure with given match type.
+struct format_match *get_regexp_match(struct format_match *matches, enum format_match_type type) {
+	while(matches->type) {
+		if(matches->type == type)
+			break;
+		matches++;
+	}
+	return matches;
+}
+
+#ifdef DEBUG
+void dump_trackinfo(const char *info, const scrobbler_trackinfo_t *sb_tinf)
+{
+	printf("--= %s =--\n", info);
+	printf(" timestamp: %d duration: %ds MbID: %s\n",
+			(int)sb_tinf->timestamp, sb_tinf->duration, sb_tinf->mbid);
+	printf(" %s - %s (%s) - %02d. %s\n", sb_tinf->artist, sb_tinf->album,
+			sb_tinf->album_artist, sb_tinf->track_number, sb_tinf->track);
+	fflush(stdout);
+}
+#endif
+
+// Parse arguments which we've get from the cmus.
+int parse_argv(struct cmtrack_info *tinfo, int argc, char *argv[])
+{
+	int i;
+
+	memset(tinfo, 0, sizeof(*tinfo));
+	for(i = 1; i + 1 < argc; i += 2) {
+		if(strcmp(argv[i], "status") == 0) {
+			if(strcmp(argv[i + 1], "playing") == 0)
+				tinfo->status = CMSTATUS_PLAYING;
+			else if(strcmp(argv[i + 1], "paused") == 0)
+				tinfo->status = CMSTATUS_PAUSED;
+			else if(strcmp(argv[i + 1], "stopped") == 0)
+				tinfo->status = CMSTATUS_STOPPED;
+		}
+		else if(strcmp(argv[i], "file") == 0)
+			tinfo->file = argv[i + 1];
+		else if(strcmp(argv[i], "url") == 0)
+			tinfo->url = argv[i + 1];
+		else if(strcmp(argv[i], "artist") == 0)
+			tinfo->artist = argv[i + 1];
+		else if(strcmp(argv[i], "album") == 0)
+			tinfo->album = argv[i + 1];
+		else if(strcmp(argv[i], "tracknumber") == 0)
+			tinfo->tracknb = atoi(argv[i + 1]);
+		else if(strcmp(argv[i], "title") == 0)
+			tinfo->title = argv[i + 1];
+		else if(strcmp(argv[i], "duration") == 0)
+			tinfo->duration = atoi(argv[i + 1]);
+#ifdef DEBUG
+		else
+			printf("unhandled argv: %s: %s\n", argv[i], argv[i + 1]);
+#endif
+	}
+
+	// NOTE: cmus always passes status parameter
+	if(tinfo->status == CMSTATUS_UNDEFINED)
+		return -1;
+
+	// check for required fields
+	if(tinfo->file != NULL || tinfo->url != NULL)
+		return 0;
+
+	// cmus initialization call
 	return 1;
 }
 
-// Load information from configuration file
-int read_cmusfm_config(struct cmusfm_config *cm_conf)
-{
-	int fd;
-	char buff[128], *ptr;
-
-	// read data from configuration file
-	sprintf(buff, "%s/" CONFIG_FNAME, get_cmus_home_dir());
-	if((fd = open(buff, O_RDONLY)) == -1) return -1;
-
-	read(fd, buff, sizeof(buff));
-	strcpy(cm_conf->user_name, strtok_r(buff, "\n", &ptr));
-	strcpy(cm_conf->session_key, strtok_r(NULL, "\n", &ptr));
-	cm_conf->parse_file_name = atoi(strtok_r(NULL, "\n", &ptr));
-	cm_conf->submit_radio = atoi(strtok_r(NULL, "\n", &ptr));
-	return close(fd);
-}
-
-// Save information to configuration file
-int write_cmusfm_config(struct cmusfm_config *cm_conf)
-{
-	int fd;
-	char buff[128];
-
-	// create config file (truncate previous one)
-	sprintf(buff, "%s/" CONFIG_FNAME, get_cmus_home_dir());
-	if((fd = open(buff, O_CREAT|O_WRONLY|O_TRUNC, S_IWUSR|S_IRUSR)) == -1)
-		return -1;
-
-	sprintf(buff, "%s\n%s\n%d\n%d\n", cm_conf->user_name, cm_conf->session_key,
-			cm_conf->parse_file_name, cm_conf->submit_radio);
-	write(fd, buff, strlen(buff));
-	return close(fd);
-}
-
-// Initialize cmusfm (get session key, tune some options)
+// User authorization callback for the initialization process.
 int user_authorization(const char *url) {
-	printf("Open this URL in your favorite web browser and then "
+	printf("Open this URL in your favorite web browser and afterwards "
 			"press ENTER:\n  %s\n", url);
-	getchar(); return 0;}
-int cmusfm_initialization()
-{
-	struct cmusfm_config cm_conf;
-	scrobbler_session_t *sbs;
-	int fetch_session_key;
-	char yesno_buf[8];
-
-	fetch_session_key = 1;
-	memset(&cm_conf, 0, sizeof(cm_conf));
-	sbs = scrobbler_initialize(SC_api_key, SC_secret);
-
-	// try to read previous configuration
-	if(read_cmusfm_config(&cm_conf) == 0) {
-		printf("Testing previous session key (Last.fm user name: %s) ...",
-				cm_conf.user_name); fflush(stdout);
-		scrobbler_set_session_key_str(sbs, cm_conf.session_key);
-		if(scrobbler_test_session_key(sbs) == 0) printf("OK.\n");
-		else printf("Failed.\n");
-
-		printf("Fetch new session key [yes/NO]: ");
-		fgets(yesno_buf, sizeof(yesno_buf), stdin);
-		if(memcmp(yesno_buf, "yes", 3) == 0) fetch_session_key = 1;
-		else fetch_session_key = 0;
-	}
-
-	if(fetch_session_key) { //fetch new session key
-		if(scrobbler_authentication(sbs, user_authorization) == 0){
-			scrobbler_get_session_key_str(sbs, cm_conf.session_key);
-			strcpy(cm_conf.user_name, sbs->user_name);}
-		else{ //if user_name and/or session_key is NULL -> segfault :)
-			strcpy(cm_conf.user_name, "(none)");
-			strcpy(cm_conf.session_key, "xxx");
-			printf("Error (scobbler authentication failed)\n\n");}
-	}
-	scrobbler_free(sbs);
-
-	// ask user few questions
-	printf("Submit tracks played from radio [yes/NO]: ");
-	fgets(yesno_buf, sizeof(yesno_buf), stdin);
-	if(memcmp(yesno_buf, "yes", 3) == 0) cm_conf.submit_radio = 1;
-	printf("Try to parse file name if tags are not supplied [yes/NO]: ");
-	fgets(yesno_buf, sizeof(yesno_buf), stdin);
-	if(memcmp(yesno_buf, "yes", 3) == 0) cm_conf.parse_file_name = 1;
-
-	if(write_cmusfm_config(&cm_conf) != 0)
-		printf("Error (cannot create configuration file)\n");
+	getchar();
 	return 0;
 }
 
-// Simple and fast "hashing" function
-int make_data_hash(const unsigned char *data, int len)
+// Initialization routine. Get Last.fm session key from the scrobbler service
+// and initialize configuration file with default values (if needed).
+int cmusfm_initialization()
 {
-	int x, hash;
+	scrobbler_session_t *sbs;
+	struct cmusfm_config conf;
+	int fetch_session_key;
+	char *conf_fname;
+	char yesno[8];
 
-	for(x = hash = 0; x < len; x++)
-		hash += data[x]*(x + 1);
-	return hash;
+	fetch_session_key = 1;
+	conf_fname = get_cmusfm_config_file();
+	sbs = scrobbler_initialize(SC_api_key, SC_secret);
+
+	// try to read previous configuration
+	if(cmusfm_config_read(conf_fname, &conf) == 0) {
+		printf("Checking previous session (user: %s) ...", conf.user_name);
+		fflush(stdout);
+		scrobbler_set_session_key_str(sbs, conf.session_key);
+		if(scrobbler_test_session_key(sbs) == 0) printf("OK.\n");
+		else printf("failed.\n");
+
+		printf("Fetch new session key [yes/NO]: ");
+		fgets(yesno, sizeof(yesno), stdin);
+		if(strncmp(yesno, "yes", 3) != 0)
+			fetch_session_key = 0;
+	}
+	else {  // initialize configuration defaults
+		strcpy(conf.format_localfile, "^(?A.+) - (?T.+)\\.[^.]+$");
+		strcpy(conf.format_shoutcast, "^(?A.+) - (?T.+)$");
+		conf.nowplaying_localfile = 1;
+		conf.nowplaying_shoutcast = 1;
+		conf.submit_localfile = 1;
+		conf.submit_shoutcast = 1;
+	}
+
+	if(fetch_session_key) {  // fetch new session key
+		if(scrobbler_authentication(sbs, user_authorization) == 0) {
+			scrobbler_get_session_key_str(sbs, conf.session_key);
+			strncpy(conf.user_name, sbs->user_name, sizeof(conf.user_name) - 1);
+		}
+		else {  // if user_name and/or session_key is NULL -> segfault :)
+			strcpy(conf.user_name, "(none)");
+			strcpy(conf.session_key, "xxx");
+			printf("Error: scrobbler authentication failed\n\n");
+		}
+	}
+	scrobbler_free(sbs);
+
+	if(cmusfm_config_write(conf_fname, &conf) != 0)
+		printf("Error: unable to write configuration file\n");
+
+	return 0;
+}
+
+int main(int argc, char *argv[])
+{
+	struct cmtrack_info tinfo;
+
+	if(argc == 1) {  // print initialization help message
+		printf("usage: cmusfm [init]\n\n"
+"NOTE: Before usage with the cmus you should invoke this program with the\n"
+"      `init` argument. Afterwards you can set the status_display_program\n"
+"      (for more informations see `man cmus`). Enjoy!\n");
+		return EXIT_SUCCESS;
+	}
+
+	if(argc == 2 && strcmp(argv[1], "init") == 0)
+		return cmusfm_initialization();
+
+	if(cmusfm_config_read(get_cmusfm_config_file(), &config) == -1) {
+		perror("error: unable to read config file");
+		return EXIT_FAILURE;
+	}
+
+	switch(parse_argv(&tinfo, argc, argv)) {
+	case -1:
+		fprintf(stderr, "error: arguments parsing failed\n");
+		return EXIT_FAILURE;
+	case 1:
+		cmusfm_server_start();
+		return EXIT_SUCCESS;
+	}
+
+	if(cmusfm_server_send_track(&tinfo)) {
+		fprintf(stderr, "error: sending track to server failed\n");
+		return EXIT_FAILURE;
+	}
+
+	return EXIT_SUCCESS;
 }
