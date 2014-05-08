@@ -25,6 +25,7 @@
 #include "cmusfm.h"
 #include "config.h"
 #include "server.h"
+#include "debug.h"
 
 
 // Last.fm API key for cmusfm
@@ -64,6 +65,8 @@ struct format_match *get_regexp_format_matches(const char *str, const char *form
 	regex_t regex;
 	regmatch_t regmatch[MATCHES_SIZE];
 
+	debug("matching: %s: %s", format, str);
+
 	// allocate memory for up to FORMAT_MATCH_TYPE_COUNT matches
 	// with one extra always empty terminating structure
 	matches = (struct format_match*)calloc(MATCHES_SIZE, sizeof(*matches));
@@ -74,6 +77,8 @@ struct format_match *get_regexp_format_matches(const char *str, const char *form
 		matches[i - 1].type = p[-1];
 		strcpy(&regexp[p - format - i * 2], p);
 	}
+
+	debug("regexp: %s", regexp);
 
 	status = regcomp(&regex, regexp, REG_EXTENDED | REG_ICASE);
 	free(regexp);
@@ -106,18 +111,6 @@ struct format_match *get_regexp_match(struct format_match *matches, enum format_
 	return matches;
 }
 
-#ifdef DEBUG
-void dump_trackinfo(const char *info, const scrobbler_trackinfo_t *sb_tinf)
-{
-	printf("--= %s =--\n", info);
-	printf(" timestamp: %d duration: %ds MbID: %s\n",
-			(int)sb_tinf->timestamp, sb_tinf->duration, sb_tinf->mbid);
-	printf(" %s - %s (%s) - %02d. %s\n", sb_tinf->artist, sb_tinf->album,
-			sb_tinf->album_artist, sb_tinf->track_number, sb_tinf->track);
-	fflush(stdout);
-}
-#endif
-
 // Parse arguments which we've get from the cmus.
 int parse_argv(struct cmtrack_info *tinfo, int argc, char *argv[])
 {
@@ -125,6 +118,7 @@ int parse_argv(struct cmtrack_info *tinfo, int argc, char *argv[])
 
 	memset(tinfo, 0, sizeof(*tinfo));
 	for(i = 1; i + 1 < argc; i += 2) {
+		debug("cmus argv: %s %s", argv[i], argv[i + 1]);
 		if(strcmp(argv[i], "status") == 0) {
 			if(strcmp(argv[i + 1], "playing") == 0)
 				tinfo->status = CMSTATUS_PLAYING;
@@ -147,10 +141,6 @@ int parse_argv(struct cmtrack_info *tinfo, int argc, char *argv[])
 			tinfo->title = argv[i + 1];
 		else if(strcmp(argv[i], "duration") == 0)
 			tinfo->duration = atoi(argv[i + 1]);
-#ifdef DEBUG
-		else
-			printf("unhandled argv: %s: %s\n", argv[i], argv[i + 1]);
-#endif
 	}
 
 	// NOTE: cmus always passes status parameter

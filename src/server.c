@@ -29,6 +29,7 @@
 #include "cmusfm.h"
 #include "server.h"
 #include "cache.h"
+#include "debug.h"
 
 
 void set_trackinfo(scrobbler_trackinfo_t *sbt, const struct sock_data_tag *dt)
@@ -68,16 +69,15 @@ void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs)
 	memset(&sb_tinf, 0, sizeof(sb_tinf));
 
 	rd_len = read(fd, buffer, sizeof(buffer));
+	debug("rdlen: %d, status: %d", rd_len, sock_data->status);
+
 	if(rd_len < sizeof(struct sock_data_tag))
 		return;  // something was wrong...
 
-#ifdef DEBUG
-	printf("sockrdlen: %d status: 0x%02x duration: %ds\n %s - %s - %02d. %s\n",
-			rd_len, sock_data->status, sock_data->duration,
+	debug("payload: %s - %s - %d. %s (%ds)",
 			(char *)(sock_data + 1), &((char *)(sock_data + 1))[sock_data->alboff],
-			sock_data->tracknb, &((char *)(sock_data + 1))[sock_data->titoff]);
-	fflush(stdout);
-#endif
+			sock_data->tracknb, &((char *)(sock_data + 1))[sock_data->titoff],
+			sock_data->duration);
 
 	// make data hash without status field
 	new_hash = make_data_hash((unsigned char*)&buffer[1], rd_len - 1);
@@ -107,19 +107,17 @@ submission_place:
 			sb_tinf.timestamp = started;
 
 			if((saved_is_radio && !config.submit_shoutcast) ||
-					(!saved_is_radio && !config.submit_localfile))
+					(!saved_is_radio && !config.submit_localfile)) {
 				// skip submission if we don't want it
+				debug("submission not enabled");
 				goto submission_skip;
+			}
 
 			if(scrobbler_fail_time == 0) {
-#ifndef DEBUG
 				if(scrobbler_scrobble(sbs, &sb_tinf) != 0) {
 					scrobbler_fail_time = 1;
 					goto submission_failed;
 				}
-#else
-				dump_trackinfo("submission", &sb_tinf);
-#endif
 			}
 			else  // write data to cache
 submission_failed:
@@ -149,13 +147,13 @@ submission_skip:
 				if((saved_is_radio && config.nowplaying_shoutcast) ||
 						(!saved_is_radio && config.nowplaying_localfile)) {
 					set_trackinfo(&sb_tinf, sock_data);
-#ifndef DEBUG
 					if(scrobbler_update_now_playing(sbs, &sb_tinf) != 0)
 						scrobbler_fail_time = 1;
-#else
-					dump_trackinfo("update_now_playing", &sb_tinf);
-#endif
 				}
+#if DEBUG
+				else
+					debug("now playing not enabled");
+#endif
 			}
 		}
 	}
@@ -198,6 +196,8 @@ void cmusfm_server_start()
 	fd_set rd_fds;
 	scrobbler_session_t *sbs;
 
+	debug("starting cmusfm server");
+
 	memset(&sock_a, 0, sizeof(sock_a));
 	sock_a.sun_family = AF_UNIX;
 	strcpy(sock_a.sun_path, get_cmusfm_socket_file());
@@ -225,6 +225,7 @@ void cmusfm_server_start()
 	sigaction(SIGINT, &sigact, NULL);
 
 	// create server communication socket (no error check)
+	unlink(sock_a.sun_path);
 	bind(sock, (struct sockaddr*)(&sock_a), sizeof(sock_a));
 	listen(sock, 2);
 
@@ -262,6 +263,8 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo)
 	struct sockaddr_un sock_a;
 	int sock;
 
+	debug("sending track to cmusfm server");
+
 	memset(buffer, 0, sizeof(buffer));
 
 	// load data into the sock container
@@ -278,6 +281,7 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo)
 			(tinfo->file != NULL && tinfo->artist == NULL && tinfo->title == NULL)) {
 		// NOTE: Automatic format detection mode.
 		// When title and artist was not specified but URL or file is available.
+		debug("regular expression matching mode");
 
 		if(tinfo->url != NULL) {
 			// URL: try to fetch artist and track tile form the 'title' field
@@ -335,6 +339,8 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo)
 		return -1;
 	}
 
+	debug("socket wrlen: %ld", sizeof(struct sock_data_tag) +
+			sock_data->titoff + strlen(title) + 1);
 	write(sock, buffer, sizeof(struct sock_data_tag) + sock_data->titoff +
 			strlen(title) + 1);
 	return close(sock);

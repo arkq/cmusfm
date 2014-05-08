@@ -1,0 +1,6 @@
+#!/bin/sh
+
+date +%s >>/tmp/cmusfm.debug
+echo "--- $@" >>/tmp/cmusfm.debug
+cmusfm "$@" >>/tmp/cmusfm.debug 2>&1
+echo "---" >>/tmp/cmusfm.debug

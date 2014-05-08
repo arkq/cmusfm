@@ -24,6 +24,7 @@
 #include <fcntl.h>
 #include "cmusfm.h"
 #include "cache.h"
+#include "debug.h"
 
 
 // Write data to cache file which should be submitted later.
@@ -34,6 +35,11 @@ void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf)
 {
 	int fd, data_size;
 	int artlen, tralen, alblen;
+
+	debug("cache update: %ld", sb_tinf->timestamp);
+	debug("payload: %s - %s (%s) - %d. %s (%ds)",
+			sb_tinf->artist, sb_tinf->album, sb_tinf->album_artist,
+			sb_tinf->track_number, sb_tinf->track, sb_tinf->duration);
 
 	fd = open(get_cmusfm_cache_file(), O_CREAT | O_APPEND | O_WRONLY, 00644);
 	if(fd == -1) return;
@@ -65,6 +71,8 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs)
 	void *record;
 	int rec_size;
 
+	debug("cache submit");
+
 	fname = get_cmusfm_cache_file();
 	if((fd = open(fname, O_RDONLY)) == -1)
 		return;  // no cache file -> nothing to submit :)
@@ -75,6 +83,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs)
 
 		for(record = rd_buff;;) {
 			rec_size = *((int*)record);
+			debug("record size: %d", rec_size);
 
 			// break if current record is truncated
 			if(record - (void*)rd_buff + rec_size > rd_len) break;
@@ -85,11 +94,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs)
 			sb_tinf.album = &sb_tinf.track[strlen(sb_tinf.track) + 1];
 
 			// submit tracks to Last.fm
-#ifndef DEBUG
 			scrobbler_scrobble(sbs, &sb_tinf);
-#else
-			dump_trackinfo("cmusfm_cache_submit", &sb_tinf);
-#endif
 
 			// point to next record
 			record += rec_size;

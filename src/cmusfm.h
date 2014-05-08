@@ -73,6 +73,5 @@ struct format_match {
 char *get_cmus_home_dir();
 struct format_match *get_regexp_format_matches(const char *str, const char *format);
 struct format_match *get_regexp_match(struct format_match *matches, enum format_match_type type);
-void dump_trackinfo(const char *info, const scrobbler_trackinfo_t *sb_tinf);
 
 #endif

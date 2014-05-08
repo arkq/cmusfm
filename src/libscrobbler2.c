@@ -25,6 +25,7 @@
 #include <curl/curl.h>
 #include <openssl/md5.h>
 #include "libscrobbler2.h"
+#include "debug.h"
 
 
 // used as a buffer for GET/POST server response
@@ -51,6 +52,7 @@ static size_t sb_curl_write_callback(char *ptr, size_t size, size_t nmemb,
 	struct sb_response_data *resp = (struct sb_response_data*)data;
 	int len = size * nmemb;
 
+	debug("read: len: %d, body: %s", len, ptr);
 	resp->data = realloc(resp->data, resp->len + len + 1);
 	memcpy(&resp->data[resp->len], ptr, len);
 	resp->len += len;
@@ -94,6 +96,7 @@ int sb_check_response(struct sb_response_data *response, int curl_status,
 {
 	char *ptr;
 
+	debug("check: status: %d, body: %s", curl_status, response->data);
 	if(curl_status != 0) {
 		// network transfer failure (curl error)
 		sbs->error_code = curl_status;
@@ -130,6 +133,7 @@ void sb_generate_method_signature(struct sb_getpost_data *sb_data, int len,
 		offset += sprintf(tmp_str + offset, format, sb_data[x].name, sb_data[x].data);
 	}
 
+	debug("signature data: %s", tmp_str);
 	strcat(tmp_str, secret_hex);
 	MD5((unsigned char*)tmp_str, strlen(tmp_str), sign);
 }
@@ -158,6 +162,7 @@ char *sb_make_curl_getpost_string(CURL *curl, char *str_buffer,
 	}
 
 	str_buffer[offset - 1] = 0; //strip '&' at the end of string
+	debug("params: %s", str_buffer);
 	return str_buffer;
 }
 
@@ -190,6 +195,11 @@ int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt)
 		//{"streamId", 's', NULL},
 		{"api_sig", 's', sign_hex}};
 
+	debug("scrobble: %ld", sbt->timestamp);
+	debug("payload: %s - %s (%s) - %d. %s (%ds)",
+			sbt->artist, sbt->album, sbt->album_artist,
+			sbt->track_number, sbt->track, sbt->duration);
+
 	if(sbt->artist == NULL || sbt->track == NULL || sbt->timestamp == 0)
 		return SCROBBERR_TRACKINF;
 
@@ -209,6 +219,7 @@ int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt)
 	curl_easy_setopt(curl, CURLOPT_URL, SCROBBLER_URL);
 	status = curl_easy_perform(curl);
 	status = sb_check_response(&response, status, sbs);
+	debug("scrobble status: %d", status);
 
 	sb_curl_cleanup(curl, &response);
 	return status;
@@ -243,6 +254,11 @@ int sb_update_now_playing(scrobbler_session_t *sbs,
 		{"trackNumber", 'd', (void*)(long)sbt->track_number},
 		{"api_sig", 's', sign_hex}};
 
+	debug("now playing: %ld", sbt->timestamp);
+	debug("payload: %s - %s (%s) - %d. %s (%ds)",
+			sbt->artist, sbt->album, sbt->album_artist,
+			sbt->track_number, sbt->track, sbt->duration);
+
 	if((curl = sb_curl_init(CURLOPT_POST, &response)) == NULL)
 		return SCROBBERR_CURLINIT;
 
@@ -259,6 +275,7 @@ int sb_update_now_playing(scrobbler_session_t *sbs,
 	curl_easy_setopt(curl, CURLOPT_URL, SCROBBLER_URL);
 	status = curl_easy_perform(curl);
 	status = sb_check_response(&response, status, sbs);
+	debug("now playing status: %d", status);
 
 	sb_curl_cleanup(curl, &response);
 	return status;
@@ -268,6 +285,7 @@ int sb_update_now_playing(scrobbler_session_t *sbs,
 int scrobbler_update_now_playing(scrobbler_session_t *sbs,
 		scrobbler_trackinfo_t *sbt)
 {
+	debug("now playing wrapper");
 	if(sbt->artist == NULL || sbt->track == NULL)
 		return SCROBBERR_TRACKINF;
 	return sb_update_now_playing(sbs, sbt);
@@ -281,6 +299,7 @@ int scrobbler_test_session_key(scrobbler_session_t *sbs)
 	scrobbler_trackinfo_t sbt;
 	int status;
 
+	debug("test service connection");
 	memset(&sbt, 0, sizeof(sbt));
 	status = sb_update_now_playing(sbs, &sbt);
 
@@ -370,6 +389,7 @@ int scrobbler_authentication(scrobbler_session_t *sbs,
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 	status = curl_easy_perform(curl);
 	status = sb_check_response(&response, status, sbs);
+	debug("authentication status: %d", status);
 
 	if(status != 0) {
 		sb_curl_cleanup(curl, &response);
