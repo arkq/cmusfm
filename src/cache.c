@@ -33,8 +33,9 @@
 // track(NULL-term string)|album(NULL-term string)
 void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf)
 {
-	int fd, data_size;
+	int fd;
 	int artlen, tralen, alblen;
+	size_t data_size;
 
 	debug("cache update: %ld", sb_tinf->timestamp);
 	debug("payload: %s - %s (%s) - %d. %s (%ds)",
@@ -49,10 +50,10 @@ void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf)
 	alblen = strlen(sb_tinf->album);
 
 	// calculate record size
-	data_size = sizeof(int) + sizeof(scrobbler_trackinfo_t)
-			+ artlen + 1 + tralen + 1 + alblen + 1;
+	data_size = sizeof(data_size) + sizeof(scrobbler_trackinfo_t) +
+			artlen + 1 + tralen + 1 + alblen + 1;
 
-	write(fd, &data_size, sizeof(int));
+	write(fd, &data_size, sizeof(data_size));
 	write(fd, sb_tinf, sizeof(scrobbler_trackinfo_t));
 	write(fd, sb_tinf->artist, artlen + 1);
 	write(fd, sb_tinf->track, tralen + 1);
@@ -66,10 +67,11 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs)
 {
 	char rd_buff[4096];
 	char *fname;
-	int fd, rd_len;
+	int fd;
 	scrobbler_trackinfo_t sb_tinf;
 	void *record;
-	int rec_size;
+	ssize_t rd_len;
+	size_t rec_size;
 
 	debug("cache submit");
 
@@ -82,14 +84,15 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs)
 		if(rd_len == -1) break;
 
 		for(record = rd_buff;;) {
-			rec_size = *((int*)record);
-			debug("record size: %d", rec_size);
+			rec_size = *((size_t*)record);
+			debug("record size: %ld", rec_size);
 
 			// break if current record is truncated
-			if(record - (void*)rd_buff + rec_size > rd_len) break;
+			if(record - (void*)rd_buff + rec_size > (size_t)rd_len)
+				break;
 
-			memcpy(&sb_tinf, record + sizeof(int), sizeof(sb_tinf));
-			sb_tinf.artist = record + sizeof(int) + sizeof(sb_tinf);
+			memcpy(&sb_tinf, record + sizeof(rec_size), sizeof(sb_tinf));
+			sb_tinf.artist = record + sizeof(rec_size) + sizeof(sb_tinf);
 			sb_tinf.track = &sb_tinf.artist[strlen(sb_tinf.artist) + 1];
 			sb_tinf.album = &sb_tinf.track[strlen(sb_tinf.track) + 1];
 
@@ -100,7 +103,8 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs)
 			record += rec_size;
 
 			// break if there is no enough data to obtain the record size
-			if(record - (void*)rd_buff + sizeof(int) > rd_len) break;
+			if(record - (void*)rd_buff + sizeof(rec_size) > (size_t)rd_len)
+				break;
 		}
 
 		if(record - (void*)rd_buff != rd_len)

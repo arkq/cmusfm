@@ -5,7 +5,7 @@
 
 CC      = gcc
 
-CFLAGS  = -pipe -Wall -Os
+CFLAGS  = -pipe -Wextra -Os
 LDFLAGS = -lcurl -lcrypto
 
 OBJS    = main.o config.o libscrobbler2.o server.o cache.o

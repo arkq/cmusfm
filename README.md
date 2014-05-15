@@ -26,7 +26,7 @@ types:
 * `(?N...)` - match track number
 * `(?T...)` - match track title
 
-All extension types can be used only once, otherwise only the last occurrence will be used. Using
+All extension types can be used only once, otherwise only the first occurrence will be used. Using
 matched subexpressions without extension is not forbidden, however can result in an unexpected
 behavior. Default configuration assumes formats as follows:
 
@@ -61,4 +61,5 @@ simply run the code below.
 	$ cmusfm init
 
 After that you can edit `~/.cmus/cmusfm.conf` configuration file. Note, that for some changes
-to take place restart of the cmus is required.
+to take place restart of the cmusfm server is required. To achieved this, one has to quit cmus
+player and then kill cmusfm background instance (e.g. `pkill cmusfm`).

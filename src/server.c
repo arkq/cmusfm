@@ -57,7 +57,7 @@ void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs)
 	static char saved_data[CMSOCKET_BUFFER_SIZE], saved_is_radio = 0;
 	char buffer[CMSOCKET_BUFFER_SIZE];
 	struct sock_data_tag *sock_data = (struct sock_data_tag*)buffer;
-	int rd_len;
+	ssize_t rd_len;
 	// scrobbler stuff
 	static time_t scrobbler_fail_time = 1; //0 -> login OK
 	static time_t started = 0, playtime = 0, fulltime = 10, reinitime = 0;
@@ -69,15 +69,21 @@ void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs)
 	memset(&sb_tinf, 0, sizeof(sb_tinf));
 
 	rd_len = read(fd, buffer, sizeof(buffer));
-	debug("rdlen: %d, status: %d", rd_len, sock_data->status);
+	debug("rdlen: %ld, status: %d", rd_len, sock_data->status);
 
-	if(rd_len < sizeof(struct sock_data_tag))
+	if(rd_len < (ssize_t)sizeof(struct sock_data_tag))
 		return;  // something was wrong...
 
 	debug("payload: %s - %s - %d. %s (%ds)",
 			(char *)(sock_data + 1), &((char *)(sock_data + 1))[sock_data->alboff],
 			sock_data->tracknb, &((char *)(sock_data + 1))[sock_data->titoff],
 			sock_data->duration);
+
+#ifdef DEBUG
+	// simulate server "hiccup" (e.g. internet connection issue)
+	debug("server hiccup test (5s)");
+	sleep(5);
+#endif
 
 	// make data hash without status field
 	new_hash = make_data_hash((unsigned char*)&buffer[1], rd_len - 1);
@@ -184,6 +190,7 @@ submission_skip:
 // server shutdown stuff
 static int server_on = 1;
 static void cmusfm_server_stop(int sig) {
+	debug("stopping cmusfm server");
 	server_on = 0;
 }
 
@@ -206,12 +213,6 @@ void cmusfm_server_start()
 	// check if behind the socket there is already an active server instance
 	if(connect(sock, (struct sockaddr*)(&sock_a), sizeof(sock_a)) == 0)
 		return;
-
-#ifndef DEBUG
-	// fork server into background
-	if(fork() != 0)
-		return;  // run only child process
-#endif
 
 	// initialize scrobbling library
 	sbs = scrobbler_initialize(SC_api_key, SC_secret);
