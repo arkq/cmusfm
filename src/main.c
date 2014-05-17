@@ -194,14 +194,6 @@ int cmusfm_initialization()
 		if(strncmp(yesno, "yes", 3) != 0)
 			fetch_session_key = 0;
 	}
-	else {  // initialize configuration defaults
-		strcpy(conf.format_localfile, "^(?A.+) - (?T.+)\\.[^.]+$");
-		strcpy(conf.format_shoutcast, "^(?A.+) - (?T.+)$");
-		conf.nowplaying_localfile = 1;
-		conf.nowplaying_shoutcast = 1;
-		conf.submit_localfile = 1;
-		conf.submit_shoutcast = 1;
-	}
 
 	if(fetch_session_key) {  // fetch new session key
 		if(scrobbler_authentication(sbs, user_authorization) == 0) {

@@ -21,6 +21,11 @@
 #ifndef __CMUSFM_CONFIG_H
 #define __CMUSFM_CONFIG_H
 
+#ifdef HAVE_CONFIG_H
+#include "../config.h"
+#endif
+
+
 // Configuration file key definitions
 #define CMCONF_USER_NAME "user"
 #define CMCONF_SESSION_KEY "key"
@@ -30,6 +35,7 @@
 #define CMCONF_NOWPLAYING_SHOUTCAST "now-playing-shoutcast"
 #define CMCONF_SUBMIT_LOCALFILE "submit-localfile"
 #define CMCONF_SUBMIT_SHOUTCAST "submit-shoutcast"
+#define CMCONF_NOTIFICATION "notification"
 
 struct cmusfm_config {
 	char user_name[64];
@@ -43,6 +49,9 @@ struct cmusfm_config {
 	unsigned int nowplaying_shoutcast : 1;
 	unsigned int submit_localfile : 1;
 	unsigned int submit_shoutcast : 1;
+#ifdef ENABLE_LIBNOTIFY
+	unsigned int notification : 1;
+#endif
 };
 
 

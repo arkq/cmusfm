@@ -72,7 +72,14 @@ int cmusfm_config_read(const char *fname, struct cmusfm_config *conf)
 	FILE *f;
 	char line[128];
 
+	// initialize configuration defaults
 	memset(conf, 0, sizeof(*conf));
+	strcpy(conf->format_localfile, "^(?A.+) - (?T.+)\\.[^.]+$");
+	strcpy(conf->format_shoutcast, "^(?A.+) - (?T.+)$");
+	conf->nowplaying_localfile = 1;
+	conf->nowplaying_shoutcast = 1;
+	conf->submit_localfile = 1;
+	conf->submit_shoutcast = 1;
 
 	if((f = fopen(fname, "r")) == NULL)
 		return -1;
@@ -94,6 +101,10 @@ int cmusfm_config_read(const char *fname, struct cmusfm_config *conf)
 			conf->submit_localfile = decode_config_bool(get_config_value(line));
 		else if(strncmp(line, CMCONF_SUBMIT_SHOUTCAST, sizeof(CMCONF_SUBMIT_SHOUTCAST) - 1) == 0)
 			conf->submit_shoutcast = decode_config_bool(get_config_value(line));
+#ifdef ENABLE_LIBNOTIFY
+		else if(strncmp(line, CMCONF_NOTIFICATION, sizeof(CMCONF_NOTIFICATION) - 1) == 0)
+			conf->notification = decode_config_bool(get_config_value(line));
+#endif
 	}
 
 	return fclose(f);
@@ -124,6 +135,9 @@ int cmusfm_config_write(const char *fname, struct cmusfm_config *conf)
 	fprintf(f, "%s = \"%s\"\n", CMCONF_NOWPLAYING_SHOUTCAST, encode_config_bool(conf->nowplaying_shoutcast));
 	fprintf(f, "%s = \"%s\"\n", CMCONF_SUBMIT_LOCALFILE, encode_config_bool(conf->submit_localfile));
 	fprintf(f, "%s = \"%s\"\n", CMCONF_SUBMIT_SHOUTCAST, encode_config_bool(conf->submit_shoutcast));
+#ifdef ENABLE_LIBNOTIFY
+	fprintf(f, "%s = \"%s\"\n", CMCONF_NOTIFICATION, encode_config_bool(conf->notification));
+#endif
 
 	return fclose(f);
 }

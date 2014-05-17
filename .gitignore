@@ -26,6 +26,7 @@
 /autom4te.cache/
 /build*/
 /aclocal.m4
+/compile
 /configure
 /depcomp
 /install-sh

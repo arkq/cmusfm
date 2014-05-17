@@ -34,10 +34,14 @@
 #include "server.h"
 #include "cache.h"
 #include "debug.h"
+#ifdef ENABLE_LIBNOTIFY
+#include "notify.h"
+#endif
 
 
 void set_trackinfo(scrobbler_trackinfo_t *sbt, const struct sock_data_tag *dt)
 {
+	memset(sbt, 0, sizeof(*sbt));
 	sbt->duration = dt->duration;
 	sbt->track_number = dt->tracknb;
 	sbt->artist = (char *)(dt + 1);
@@ -69,8 +73,6 @@ void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs)
 	scrobbler_trackinfo_t sb_tinf;
 	int new_hash;
 	char raw_status;
-
-	memset(&sb_tinf, 0, sizeof(sb_tinf));
 
 	rd_len = read(fd, buffer, sizeof(buffer));
 	debug("rdlen: %ld, status: %d", rd_len, sock_data->status);
@@ -152,18 +154,27 @@ submission_skip:
 			memcpy(saved_data, sock_data, rd_len);
 			saved_is_radio = sock_data->status & CMSTATUS_SHOUTCASTMASK;
 
-			if(raw_status == CMSTATUS_PLAYING && scrobbler_fail_time == 0) {
-				// update now-playing indicator if we want it
-				if((saved_is_radio && config.nowplaying_shoutcast) ||
-						(!saved_is_radio && config.nowplaying_localfile)) {
-					set_trackinfo(&sb_tinf, sock_data);
-					if(scrobbler_update_now_playing(sbs, &sb_tinf) != 0)
-						scrobbler_fail_time = 1;
-				}
-#if DEBUG
+			if(raw_status == CMSTATUS_PLAYING) {
+				set_trackinfo(&sb_tinf, sock_data);
+
+#ifdef ENABLE_LIBNOTIFY
+				if(config.notification)
+					cmusfm_notify_show(&sb_tinf);
 				else
-					debug("now playing not enabled");
+					debug("notification not enabled");
 #endif
+
+				// update now-playing indicator
+				if(scrobbler_fail_time == 0) {
+					if((saved_is_radio && config.nowplaying_shoutcast) ||
+							(!saved_is_radio && config.nowplaying_localfile)) {
+						if(scrobbler_update_now_playing(sbs, &sb_tinf) != 0)
+							scrobbler_fail_time = 1;
+					}
+					else
+						debug("now playing not enabled");
+				}
+
 			}
 		}
 	}
@@ -222,6 +233,11 @@ void cmusfm_server_start()
 	sbs = scrobbler_initialize(SC_api_key, SC_secret);
 	scrobbler_set_session_key_str(sbs, config.session_key);
 
+#ifdef ENABLE_LIBNOTIFY
+	// initialize notification library
+	cmusfm_notify_initialize();
+#endif
+
 	// catch signals which are used to quit server
 	memset(&sigact, 0, sizeof(sigact));
 	sigact.sa_handler = cmusfm_server_stop;
@@ -252,6 +268,9 @@ void cmusfm_server_start()
 	}
 
 	close(sock);
+#ifdef ENABLE_LIBNOTIFY
+	cmusfm_notify_free();
+#endif
 	scrobbler_free(sbs);
 	unlink(sock_a.sun_path);
 }

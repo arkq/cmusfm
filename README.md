@@ -9,6 +9,7 @@ Features:
 * Listening now notification support
 * Off-line played track cache for later submission
 * POSIX ERE-based file name parser
+* Desktop notification support (optionally)
 * Small memory footprint
 
 When discography is correctly tagged - at least artist and title field - scrobbling needs no
@@ -47,7 +48,7 @@ Instalation
 
 	$ autoreconf --install
 	$ mkdir build && cd build
-	$ ../configure
+	$ ../configure --enable-libnotify
 	$ make && make install
 
 
