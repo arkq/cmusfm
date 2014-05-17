@@ -23,6 +23,7 @@
 
 #include "libscrobbler2.h"
 
+
 char *get_cmusfm_cache_file();
 void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf);
 void cmusfm_cache_submit(scrobbler_session_t *sbs);

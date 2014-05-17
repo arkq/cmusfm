@@ -45,8 +45,10 @@ self-explainable options (default is "yes" for all of them):
 Instalation
 -----------
 
-	$ make
-	$ install -s cmusfm /usr/bin/
+	$ autoreconf --install
+	$ mkdir build && cd build
+	$ ../configure
+	$ make && make install
 
 
 Configuration

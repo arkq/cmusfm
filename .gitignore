@@ -21,4 +21,15 @@
 *.i*86
 *.x86_64
 *.hex
-cmusfm
+
+# Autotools
+/autom4te.cache/
+/build*/
+/aclocal.m4
+/configure
+/depcomp
+/install-sh
+/missing
+Makefile.in
+config.h.in
+*~
