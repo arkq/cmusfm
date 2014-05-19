@@ -26,16 +26,24 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <signal.h>
 #include <libgen.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#ifdef HAVE_SYS_INOTIFY_H
+#include <sys/inotify.h>
+#endif
 #include "cmusfm.h"
 #include "server.h"
 #include "cache.h"
+#include "config.h"
 #include "debug.h"
 #ifdef ENABLE_LIBNOTIFY
 #include "notify.h"
+#endif
+
+#ifndef max
+#define max(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
 
@@ -214,9 +222,13 @@ void cmusfm_server_start()
 {
 	struct sigaction sigact;
 	struct sockaddr_un sock_a;
-	int sock, peer_fd;
+	int nfds, sock, peer_fd;
 	fd_set rd_fds;
 	scrobbler_session_t *sbs;
+#ifdef HAVE_SYS_INOTIFY_H
+	int inot_fd;
+	struct inotify_event inot_even;
+#endif
 
 	debug("starting cmusfm server");
 
@@ -250,24 +262,53 @@ void cmusfm_server_start()
 	bind(sock, (struct sockaddr*)(&sock_a), sizeof(sock_a));
 	listen(sock, 2);
 
+#ifdef HAVE_SYS_INOTIFY_H
+	// initialize inode notification to watch changes in the config file
+	inot_fd = inotify_init();
+	cmusfm_config_add_watch(inot_fd);
+#endif
+
 	// server loop mode :)
-	for(peer_fd = -1; server_on;) {
+	for(nfds = 0, peer_fd = -1; server_on;) {
+
 		FD_ZERO(&rd_fds);
 		FD_SET(sock, &rd_fds);
-		if(peer_fd != -1) FD_SET(peer_fd, &rd_fds);
-		if(select(sock > peer_fd ? sock + 1 : peer_fd + 1, &rd_fds,
-				NULL, NULL, NULL) == -1) break;
+		nfds = max(sock, nfds);
+#ifdef HAVE_SYS_INOTIFY_H
+		FD_SET(inot_fd, &rd_fds);
+		nfds = max(inot_fd, nfds);
+#endif
+		if(peer_fd != -1) {
+			FD_SET(peer_fd, &rd_fds);
+			nfds = max(peer_fd, nfds);
+		}
 
-		// we've got some data in our server sockets, hmm...
-		if(FD_ISSET(sock, &rd_fds)) peer_fd = accept(sock, NULL, NULL);
-		if(FD_ISSET(peer_fd, &rd_fds)) {
+		if(select(nfds + 1, &rd_fds, NULL, NULL, NULL) == -1)
+			break;
+
+		if(FD_ISSET(sock, &rd_fds))
+			peer_fd = accept(sock, NULL, NULL);
+		if(peer_fd != -1 && FD_ISSET(peer_fd, &rd_fds)) {
 			cmusfm_server_process_data(peer_fd, sbs);
 			close(peer_fd);
 			peer_fd = -1;
 		}
+#ifdef HAVE_SYS_INOTIFY_H
+		if(FD_ISSET(inot_fd, &rd_fds)) {
+			// we're watching only one file, so the result if of no importance
+			// to us, simply read out the inotify file descriptor
+			read(inot_fd, &inot_even, sizeof(inot_even));
+			debug("inotify event occurred: %x", inot_even.mask);
+			cmusfm_config_read(get_cmusfm_config_file(), &config);
+			cmusfm_config_add_watch(inot_fd);
+		}
+#endif
 	}
 
 	close(sock);
+#ifdef HAVE_SYS_INOTIFY_H
+	close(inot_fd);
+#endif
 #ifdef ENABLE_LIBNOTIFY
 	cmusfm_notify_free();
 #endif

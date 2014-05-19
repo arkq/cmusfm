@@ -27,6 +27,9 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#ifdef HAVE_SYS_INOTIFY_H
+#include <sys/inotify.h>
+#endif
 #include "cmusfm.h"
 #include "config.h"
 
@@ -141,6 +144,16 @@ int cmusfm_config_write(const char *fname, struct cmusfm_config *conf)
 
 	return fclose(f);
 }
+
+#ifdef HAVE_SYS_INOTIFY_H
+// Add the cmusfm configuration file into the inotify watch stack. File
+// is watched for modification, and after event is triggered it will be
+// automatically removed from the stack.
+int cmusfm_config_add_watch(int fd)
+{
+	return inotify_add_watch(fd, get_cmusfm_config_file(), IN_MODIFY | IN_ONESHOT);
+}
+#endif
 
 // Helper function for retrieving cmusfm configuration file.
 char *get_cmusfm_config_file()

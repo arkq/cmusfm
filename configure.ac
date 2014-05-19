@@ -25,6 +25,9 @@ AC_CHECK_LIB(
 	[], [AC_MSG_ERROR([crypto library not found])]
 )
 
+# support for configuration reload
+AC_CHECK_HEADERS([sys/inotify.h])
+
 # support for debugging
 AC_ARG_ENABLE(
 	[debug],

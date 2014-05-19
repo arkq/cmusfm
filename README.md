@@ -63,6 +63,7 @@ simply run the code below.
 	$ grep 'user = ' ~/.cmus/cmusfm.conf || rm ~/.cmus/cmusfm.conf
 	$ cmusfm init
 
-After that you can edit `~/.cmus/cmusfm.conf` configuration file. Note, that for some changes
+After that you can edit `~/.cmus/cmusfm.conf` configuration file. ~~Note, that for some changes
 to take place restart of the cmusfm server is required. To achieved this, one has to quit cmus
-player and then kill cmusfm background instance (e.g. `pkill cmusfm`).
+player and then kill cmusfm background instance (e.g. `pkill cmusfm`).~~ Above statement is
+invalid if one's got [inotify](http://en.wikipedia.org/wiki/Inotify) subsystem available.
