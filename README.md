@@ -55,15 +55,15 @@ Instalation
 Configuration
 -------------
 
-Before usage with the cmus music player, one have to grant access for cmusfm in the Last.fm
-service. To to so, simply run cmusfm with the "init" argument and follow instructions. When
-migrating from cmusfm < 0.2.0 it is highly advised to remove previous configuration file. Or
-simply run the code below.
+Before usage with the cmus music player, one have to grant access for the cmusfm in the Last.fm
+service. To to so, simply run cmusfm with the `init` argument and follow instructions. This action
+can be also required when upgrading to newer version with new features available.
 
-	$ grep 'user = ' ~/.cmus/cmusfm.conf || rm ~/.cmus/cmusfm.conf
 	$ cmusfm init
 
-After that you can edit `~/.cmus/cmusfm.conf` configuration file. ~~Note, that for some changes
-to take place restart of the cmusfm server is required. To achieved this, one has to quit cmus
-player and then kill cmusfm background instance (e.g. `pkill cmusfm`).~~ Above statement is
-invalid if one's got [inotify](http://en.wikipedia.org/wiki/Inotify) subsystem available.
+After that you can safely edit `~/.config/cmus/cmusfm.conf` configuration file.
+
+~~Note, that for some changes to take place restart of the cmusfm server is required. To achieved
+this, one has to quit cmus player and then kill the cmusfm background instance (e.g. `pkill
+cmusfm`).~~ Above statement is not valid if one's got
+[inotify](http://en.wikipedia.org/wiki/Inotify) subsystem available.

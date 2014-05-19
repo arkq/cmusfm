@@ -46,8 +46,16 @@ struct cmusfm_config config;
 char *get_cmus_home_dir()
 {
 	static char fname[128];
-	sprintf(fname, "%s/.cmus", getenv("HOME"));
-	return fname;
+	char *xdg_config;
+
+	// get XDG config directory or fall-back to the default
+	xdg_config = getenv("XDG_CONFIG_HOME");
+	if(xdg_config)
+		strcpy(fname, xdg_config);
+	else
+		sprintf(fname, "%s/.config", getenv("HOME"));
+
+	return strcat(fname, "/cmus");
 }
 
 // Get track information substrings from the given string. Matching is
@@ -209,7 +217,7 @@ int cmusfm_initialization()
 	scrobbler_free(sbs);
 
 	if(cmusfm_config_write(conf_fname, &conf) != 0)
-		printf("Error: unable to write configuration file\n");
+		printf("Error: unable to write file: %s\n", conf_fname);
 
 	return 0;
 }
