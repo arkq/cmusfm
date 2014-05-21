@@ -21,7 +21,24 @@
 #ifndef __CMUSFM_CACHE_H
 #define __CMUSFM_CACHE_H
 
+#include <stdint.h>
 #include "libscrobbler2.h"
+
+
+#define CMUSFM_CACHE_SIGNATURE 0x6643
+
+// cache record header structure
+struct __attribute__((__packed__)) cmusfm_cache_record {
+	uint32_t signature;
+	uint32_t timestamp, track_number, duration;
+	uint16_t artist_len, album_len, album_artist_len;
+	uint16_t track_len, mbid_len;
+	//char artist[];       // NULL-terminated
+	//char album[];        // NULL-terminated
+	//char album_artist[]; // NULL-terminated
+	//char track[];        // NULL-terminated
+	//char mbid[];         // NULL-terminated
+};
 
 
 char *get_cmusfm_cache_file();
