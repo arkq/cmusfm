@@ -70,7 +70,7 @@ struct format_match {
 };
 
 
-char *get_cmus_home_dir();
+char *get_cmus_home_dir(void);
 struct format_match *get_regexp_format_matches(const char *str, const char *format);
 struct format_match *get_regexp_match(struct format_match *matches, enum format_match_type type);
 
