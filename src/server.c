@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <poll.h>
 #include <libgen.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -217,28 +218,32 @@ static void cmusfm_server_stop(int sig) {
 	server_on = 0;
 }
 
-// Run server instance (fork to background) and manage connections to it.
-void cmusfm_server_start()
-{
+// Run server instance and manage connections to it.
+void cmusfm_server_start(void) {
+
+	scrobbler_session_t *sbs;
 	struct sigaction sigact;
 	struct sockaddr_un sock_a;
-	int nfds, sock, peer_fd;
-	fd_set rd_fds;
-	scrobbler_session_t *sbs;
+	struct pollfd pfds[3];
 #ifdef HAVE_SYS_INOTIFY_H
-	int inot_fd;
 	struct inotify_event inot_even;
 #endif
 
 	debug("starting cmusfm server");
 
+	// setup poll structure for data reading
+	pfds[0].events = POLLIN;  // server
+	pfds[1].events = POLLIN;  // client
+	pfds[2].events = POLLIN;  // inotify
+	pfds[1].fd = -1;
+
 	memset(&sock_a, 0, sizeof(sock_a));
 	sock_a.sun_family = AF_UNIX;
 	strcpy(sock_a.sun_path, get_cmusfm_socket_file());
-	sock = socket(PF_UNIX, SOCK_STREAM, 0);
+	pfds[0].fd = socket(PF_UNIX, SOCK_STREAM, 0);
 
 	// check if behind the socket there is already an active server instance
-	if(connect(sock, (struct sockaddr*)(&sock_a), sizeof(sock_a)) == 0)
+	if (connect(pfds[0].fd, (struct sockaddr*)(&sock_a), sizeof(sock_a)) == 0)
 		return;
 
 	// initialize scrobbling library
@@ -259,55 +264,49 @@ void cmusfm_server_start()
 
 	// create server communication socket (no error check)
 	unlink(sock_a.sun_path);
-	bind(sock, (struct sockaddr*)(&sock_a), sizeof(sock_a));
-	listen(sock, 2);
+	bind(pfds[0].fd, (struct sockaddr*)(&sock_a), sizeof(sock_a));
+	listen(pfds[0].fd, 2);
 
 #ifdef HAVE_SYS_INOTIFY_H
 	// initialize inode notification to watch changes in the config file
-	inot_fd = inotify_init();
-	cmusfm_config_add_watch(inot_fd);
+	pfds[2].fd = inotify_init();
+	cmusfm_config_add_watch(pfds[2].fd);
+#else
+	pfds[2].fd = -1;
 #endif
 
-	// server loop mode :)
-	for(nfds = 0, peer_fd = -1; server_on;) {
+	debug("entering server main loop");
+	for (; server_on; ) {
 
-		FD_ZERO(&rd_fds);
-		FD_SET(sock, &rd_fds);
-		nfds = max(sock, nfds);
-#ifdef HAVE_SYS_INOTIFY_H
-		FD_SET(inot_fd, &rd_fds);
-		nfds = max(inot_fd, nfds);
-#endif
-		if(peer_fd != -1) {
-			FD_SET(peer_fd, &rd_fds);
-			nfds = max(peer_fd, nfds);
+		if (poll(pfds, 3, -1) == -1)
+			break;  // signal interruption
+
+		if (pfds[0].revents & POLLIN) {
+			pfds[1].fd = accept(pfds[0].fd, NULL, NULL);
+			debug("new client accepted: %d", pfds[1].fd);
 		}
 
-		if(select(nfds + 1, &rd_fds, NULL, NULL, NULL) == -1)
-			break;
-
-		if(FD_ISSET(sock, &rd_fds))
-			peer_fd = accept(sock, NULL, NULL);
-		if(peer_fd != -1 && FD_ISSET(peer_fd, &rd_fds)) {
-			cmusfm_server_process_data(peer_fd, sbs);
-			close(peer_fd);
-			peer_fd = -1;
+		if (pfds[1].revents & POLLIN && pfds[1].fd != -1) {
+			cmusfm_server_process_data(pfds[1].fd, sbs);
+			close(pfds[1].fd);
+			pfds[1].fd = -1;
 		}
+
 #ifdef HAVE_SYS_INOTIFY_H
-		if(FD_ISSET(inot_fd, &rd_fds)) {
+		if (pfds[2].revents & POLLIN) {
 			// we're watching only one file, so the result if of no importance
 			// to us, simply read out the inotify file descriptor
-			read(inot_fd, &inot_even, sizeof(inot_even));
+			read(pfds[2].fd, &inot_even, sizeof(inot_even));
 			debug("inotify event occurred: %x", inot_even.mask);
 			cmusfm_config_read(get_cmusfm_config_file(), &config);
-			cmusfm_config_add_watch(inot_fd);
+			cmusfm_config_add_watch(pfds[2].fd);
 		}
 #endif
 	}
 
-	close(sock);
+	close(pfds[0].fd);
 #ifdef HAVE_SYS_INOTIFY_H
-	close(inot_fd);
+	close(pfds[2].fd);
 #endif
 #ifdef ENABLE_LIBNOTIFY
 	cmusfm_notify_free();
@@ -412,8 +411,7 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo)
 }
 
 // Helper function for retrieving cmusfm server socket file.
-char *get_cmusfm_socket_file()
-{
+char *get_cmusfm_socket_file(void) {
 	static char fname[128];
 	sprintf(fname, "%s/" SOCKET_FNAME, get_cmus_home_dir());
 	return fname;

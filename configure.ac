@@ -24,6 +24,10 @@ AC_CHECK_LIB(
 	[crypto], [MD5],
 	[], [AC_MSG_ERROR([crypto library not found])]
 )
+AC_CHECK_HEADERS(
+	[poll.h],
+	[], [AC_MSG_ERROR([poll.h header not found])]
+)
 
 # support for configuration reload
 AC_CHECK_HEADERS([sys/inotify.h])
