@@ -64,15 +64,20 @@ static int make_data_hash(const unsigned char *data, int len) {
 // Process real server task - Last.fm submission.
 static void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs) {
 
-	static char saved_data[CMSOCKET_BUFFER_SIZE], saved_is_radio = 0;
+	static char saved_data[CMSOCKET_BUFFER_SIZE];
+	static char saved_is_radio = 0;
+
 	char buffer[CMSOCKET_BUFFER_SIZE];
-	struct sock_data_tag *sock_data = (struct sock_data_tag*)buffer;
+	struct sock_data_tag *sock_data = (struct sock_data_tag *)buffer;
 	ssize_t rd_len;
+
 	// scrobbler stuff
-	static time_t scrobbler_fail_time = 1; //0 -> login OK
-	static time_t started = 0, playtime = 0, fulltime = 10, reinitime = 0;
-	static int prev_hash = 0, paused = 0;
+	static time_t scrobbler_fail_time = 1;
+	static time_t started = 0, paused = 0, unpaused = 0;
+	static time_t playtime = 0, fulltime = 10;
+	static int prev_hash = 0;
 	scrobbler_trackinfo_t sb_tinf;
+	time_t pausedtime;
 	int new_hash;
 	char raw_status;
 
@@ -113,9 +118,9 @@ static void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs) {
 
 	if (new_hash != prev_hash) {  // maybe it's time to submit :)
 		prev_hash = new_hash;
-submission_place:
-		playtime += time(NULL) - reinitime;
-		if (started != 0 && (playtime*100/fulltime > 50 || playtime > 240)) {
+action_submit:
+		playtime += time(NULL) - unpaused;
+		if (started != 0 && (playtime * 100 / fulltime > 50 || playtime > 240)) {
 			// playing duration is OK so submit track
 			set_trackinfo(&sb_tinf, (struct sock_data_tag*)saved_data);
 			sb_tinf.timestamp = started;
@@ -124,31 +129,31 @@ submission_place:
 					(!saved_is_radio && !config.submit_localfile)) {
 				// skip submission if we don't want it
 				debug("submission not enabled");
-				goto submission_skip;
+				goto action_submit_skip;
 			}
 
 			if (scrobbler_fail_time == 0) {
 				if (scrobbler_scrobble(sbs, &sb_tinf) != 0) {
 					scrobbler_fail_time = 1;
-					goto submission_failed;
+					goto action_submit_failed;
 				}
 			}
 			else  // write data to cache
-submission_failed:
+action_submit_failed:
 				cmusfm_cache_update(&sb_tinf);
 		}
 
-submission_skip:
+action_submit_skip:
 		if (raw_status == CMSTATUS_STOPPED)
 			started = 0;
 		else {
 			// reinitialize variables, save track info in save_data
-			started = reinitime = time(NULL);
+			started = unpaused = time(NULL);
 			playtime = paused = 0;
 
 			if ((sock_data->status & CMSTATUS_SHOUTCASTMASK) != 0)
 				// you have to listen radio min 90s (50% of 180)
-				fulltime = 180; //overrun DEVBYZERO in URL mode :)
+				fulltime = 180;  // overrun DEVBYZERO in URL mode :)
 			else
 				fulltime = sock_data->duration;
 
@@ -157,6 +162,7 @@ submission_skip:
 			saved_is_radio = sock_data->status & CMSTATUS_SHOUTCASTMASK;
 
 			if (raw_status == CMSTATUS_PLAYING) {
+action_nowplaying:
 				set_trackinfo(&sb_tinf, sock_data);
 
 #ifdef ENABLE_LIBNOTIFY
@@ -182,24 +188,29 @@ submission_skip:
 	}
 	else {  // new_hash == prev_hash
 		if (raw_status == CMSTATUS_STOPPED)
-			goto submission_place;
+			goto action_submit;
 
 		if (raw_status == CMSTATUS_PAUSED) {
-			playtime += time(NULL) - reinitime;
-			paused = 1;
+			paused = time(NULL);
+			playtime += paused - unpaused;
 		}
 
-		//NOTE: There is no possibility to distinguish between replayed track
-		//      and unpaused. We assumed that if track was paused before this
-		//      indicate that track is continued to playing in other case
-		//      track is played again so we should submit previous playing.
+		// NOTE: There is no possibility to distinguish between replayed track
+		//       and unpaused. We assumed that if track was paused before, this
+		//       indicates that track is continued to play (unpaused). In other
+		//       case track is played again, so we should submit previous play.
 		if (raw_status == CMSTATUS_PLAYING) {
 			if (paused) {
-				reinitime = time(NULL);
+				unpaused = time(NULL);
+				pausedtime = unpaused - paused;
 				paused = 0;
+				if (pausedtime > 120)
+					// if playing was paused for more then 120 seconds, reinitialize
+					// now playing notification (scrobbler and libnotify)
+					goto action_nowplaying;
 			}
 			else
-				goto submission_place;
+				goto action_submit;
 		}
 	}
 }
