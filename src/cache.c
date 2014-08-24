@@ -32,16 +32,15 @@
 
 
 // Return the actual size of given cache record structure.
-size_t get_cache_record_size(const struct cmusfm_cache_record *record)
-{
+static size_t get_cache_record_size(const struct cmusfm_cache_record *record) {
 	return sizeof(*record) + record->artist_len + record->album_len +
 		record->album_artist_len + record->track_len + record->mbid_len;
 }
 
 // Copy scrobbler track info into the cache record structure. Returned
 // pointer has to be freed by the `free` function.
-struct cmusfm_cache_record *get_cache_record(const scrobbler_trackinfo_t *sb_tinf)
-{
+struct cmusfm_cache_record *get_cache_record(const scrobbler_trackinfo_t *sb_tinf) {
+
 	struct cmusfm_cache_record *cr;
 	char *ptr;
 
@@ -53,38 +52,38 @@ struct cmusfm_cache_record *get_cache_record(const scrobbler_trackinfo_t *sb_tin
 	cr->timestamp = sb_tinf->timestamp;
 	cr->track_number = sb_tinf->track_number;
 	cr->duration = sb_tinf->duration;
-	if(sb_tinf->artist)
+	if (sb_tinf->artist)
 		cr->artist_len = strlen(sb_tinf->artist) + 1;
-	if(sb_tinf->album)
+	if (sb_tinf->album)
 		cr->album_len = strlen(sb_tinf->album) + 1;
-//	if(sb_tinf->album_artist)
+//	if (sb_tinf->album_artist)
 //		cr->album_artist_len = strlen(sb_tinf->album_artist) + 1;
-	if(sb_tinf->track)
+	if (sb_tinf->track)
 		cr->track_len = strlen(sb_tinf->track) + 1;
-//	if(sb_tinf->mbid)
+//	if (sb_tinf->mbid)
 //		cr->mbid_len = strlen(sb_tinf->mbid) + 1;
 
 	// enlarge allocated memory for string data payload
-	cr = (struct cmusfm_cache_record*)realloc(cr, get_cache_record_size(cr));
-	ptr = (char*)&cr[1];
+	cr = (struct cmusfm_cache_record *)realloc(cr, get_cache_record_size(cr));
+	ptr = (char *)&cr[1];
 
-	if(cr->artist_len) {
+	if (cr->artist_len) {
 		strcpy(ptr, sb_tinf->artist);
 		ptr += cr->artist_len;
 	}
-	if(cr->album_len) {
+	if (cr->album_len) {
 		strcpy(ptr, sb_tinf->album);
 		ptr += cr->album_len;
 	}
-//	if(cr->album_artist_len) {
+//	if (cr->album_artist_len) {
 //		strcpy(ptr, sb_tinf->album_artist);
 //		ptr += cr->album_artist_len;
 //	}
-	if(cr->track_len) {
+	if (cr->track_len) {
 		strcpy(ptr, sb_tinf->track);
 		ptr += cr->track_len;
 	}
-//	if(cr->mbid_len) {
+//	if (cr->mbid_len) {
 //		strcpy(ptr, sb_tinf->mbid);
 //		ptr += cr->mbid_len;
 //	}
@@ -93,8 +92,8 @@ struct cmusfm_cache_record *get_cache_record(const scrobbler_trackinfo_t *sb_tin
 }
 
 // Write data, which should be submitted later, to the cache file.
-void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf)
-{
+void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf) {
+
 	FILE *f;
 	struct cmusfm_cache_record *record;
 
@@ -103,7 +102,7 @@ void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf)
 			sb_tinf->artist, sb_tinf->album, sb_tinf->album_artist,
 			sb_tinf->track_number, sb_tinf->track, sb_tinf->duration);
 
-	if((f = fopen(get_cmusfm_cache_file(), "a")) == NULL)
+	if ((f = fopen(get_cmusfm_cache_file(), "a")) == NULL)
 		return;
 
 	record = get_cache_record(sb_tinf);
@@ -114,8 +113,8 @@ void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf)
 }
 
 // Submit tracks saved in the cache file.
-void cmusfm_cache_submit(scrobbler_session_t *sbs)
-{
+void cmusfm_cache_submit(scrobbler_session_t *sbs) {
+
 	char rd_buff[4096];
 	char *fname;
 	FILE *f;
@@ -127,18 +126,18 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs)
 	debug("cache submit");
 
 	fname = get_cmusfm_cache_file();
-	if((f = fopen(fname, "r")) == NULL)
+	if ((f = fopen(fname, "r")) == NULL)
 		return;
 
 	// read file until EOF
-	while(!feof(f)) {
+	while (!feof(f)) {
 		rd_len = fread(rd_buff, 1, sizeof(rd_buff), f);
 		record = (struct cmusfm_cache_record*)rd_buff;
 
 		// iterate while there is no enough data for full cache record header
-		while((void*)record - (void*)rd_buff + sizeof(*record) <= rd_len) {
+		while ((void*)record - (void*)rd_buff + sizeof(*record) <= rd_len) {
 
-			if(record->signature != CMUSFM_CACHE_SIGNATURE) {
+			if (record->signature != CMUSFM_CACHE_SIGNATURE) {
 				debug("invalid cache record signature: %x", record->signature);
 				fclose(f);
 				return;
@@ -148,7 +147,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs)
 			debug("record size: %ld", record_size);
 
 			// break if current record is truncated
-			if((void*)record - (void*)rd_buff + record_size > rd_len)
+			if ((void*)record - (void*)rd_buff + record_size > rd_len)
 				break;
 
 			// restore scrobbler track info structure from cache
@@ -158,23 +157,23 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs)
 			sb_tinf.duration = record->duration;
 			ptr = (char*)&record[1];
 
-			if(record->artist_len) {
+			if (record->artist_len) {
 				sb_tinf.artist = ptr;
 				ptr += record->artist_len;
 			}
-			if(record->album_len) {
+			if (record->album_len) {
 				sb_tinf.album = ptr;
 				ptr += record->album_len;
 			}
-//			if(record->album_artist_len) {
+//			if (record->album_artist_len) {
 //				sb_tinf.album_artist = ptr;
 //				ptr += record->album_artist_len;
 //			}
-			if(record->track_len) {
+			if (record->track_len) {
 				sb_tinf.track = ptr;
 				ptr += record->track_len;
 			}
-//			if(record->mbid_len) {
+//			if (record->mbid_len) {
 //				sb_tinf.mbid = ptr;
 //				ptr += record->mbid_len;
 //			}
@@ -190,7 +189,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs)
 			record = (struct cmusfm_cache_record*)((char*)record + record_size);
 		}
 
-		if((void*)record - (void*)rd_buff != rd_len)
+		if ((void*)record - (void*)rd_buff != rd_len)
 			// seek to the beginning of current record, because
 			// it is truncated, so we have to read it one more time
 			fseek(f, (void*)record - (void*)rd_buff - rd_len, SEEK_CUR);
@@ -203,8 +202,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs)
 }
 
 // Helper function for retrieving cmusfm cache file.
-char *get_cmusfm_cache_file()
-{
+char *get_cmusfm_cache_file(void) {
 	static char fname[128];
 	sprintf(fname, "%s/" CACHE_FNAME, get_cmus_home_dir());
 	return fname;
