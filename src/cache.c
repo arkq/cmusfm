@@ -22,12 +22,14 @@
 #include "../config.h"
 #endif
 
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include "cmusfm.h"
 #include "cache.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "cmusfm.h"
 #include "debug.h"
 
 
@@ -189,7 +191,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 			record = (struct cmusfm_cache_record*)((char*)record + record_size);
 		}
 
-		if ((void*)record - (void*)rd_buff != rd_len)
+		if ((unsigned)((void*)record - (void*)rd_buff) != rd_len)
 			// seek to the beginning of current record, because
 			// it is truncated, so we have to read it one more time
 			fseek(f, (void*)record - (void*)rd_buff - rd_len, SEEK_CUR);

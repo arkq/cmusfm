@@ -22,10 +22,11 @@
 #include "../config.h"
 #endif
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <regex.h>
+
 #include "cmusfm.h"
 #include "debug.h"
 

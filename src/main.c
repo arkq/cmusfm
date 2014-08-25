@@ -22,13 +22,14 @@
 #include "../config.h"
 #endif
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
 #include "cmusfm.h"
 #include "config.h"
-#include "server.h"
 #include "debug.h"
+#include "server.h"
 
 
 // Last.fm API key for cmusfm
@@ -102,7 +103,7 @@ static int cmusfm_initialization() {
 	struct cmusfm_config conf;
 	int fetch_session_key;
 	char *conf_fname;
-	char yesno[8];
+	char yesno[8], *ptr;
 
 	fetch_session_key = 1;
 	conf_fname = get_cmusfm_config_file();
@@ -119,8 +120,8 @@ static int cmusfm_initialization() {
 			printf("failed.\n");
 
 		printf("Fetch new session key [yes/NO]: ");
-		fgets(yesno, sizeof(yesno), stdin);
-		if (strncmp(yesno, "yes", 3) != 0)
+		ptr = fgets(yesno, sizeof(yesno), stdin);
+		if (ptr != NULL && strncmp(ptr, "yes", 3) != 0)
 			fetch_session_key = 0;
 	}
 
@@ -129,9 +130,8 @@ static int cmusfm_initialization() {
 			scrobbler_get_session_key_str(sbs, conf.session_key);
 			strncpy(conf.user_name, sbs->user_name, sizeof(conf.user_name) - 1);
 		}
-		else {
-			printf("Error: scrobbler authentication failed\n\n");
-		}
+		else
+			printf("Error: scrobbler authentication failed\n");
 	}
 	scrobbler_free(sbs);
 

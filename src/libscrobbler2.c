@@ -22,13 +22,15 @@
 #include "../config.h"
 #endif
 
-#include <stdlib.h>
+#include "libscrobbler2.h"
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <curl/curl.h>
 #include <openssl/md5.h>
-#include "libscrobbler2.h"
+
 #include "debug.h"
 
 

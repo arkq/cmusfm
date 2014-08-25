@@ -22,21 +22,24 @@
 #include "../config.h"
 #endif
 
-#include <unistd.h>
-#include <stdlib.h>
+#include "server.h"
+
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <fcntl.h>
-#include <signal.h>
-#include <poll.h>
 #include <libgen.h>
+#include <poll.h>
+#include <signal.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #ifdef HAVE_SYS_INOTIFY_H
 #include <sys/inotify.h>
 #endif
-#include "cmusfm.h"
-#include "server.h"
+
 #include "cache.h"
+#include "cmusfm.h"
 #include "config.h"
 #include "debug.h"
 #ifdef ENABLE_LIBNOTIFY
@@ -218,6 +221,7 @@ action_nowplaying:
 // server shutdown stuff
 static int server_on = 1;
 static void cmusfm_server_stop(int sig) {
+	(void)sig;
 	debug("stopping cmusfm server");
 	server_on = 0;
 }
@@ -280,7 +284,7 @@ void cmusfm_server_start(void) {
 #endif
 
 	debug("entering server main loop");
-	for (; server_on; ) {
+	while (server_on) {
 
 		if (poll(pfds, 3, -1) == -1)
 			break;  // signal interruption
@@ -409,8 +413,8 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
 	debug("socket wrlen: %ld", sizeof(struct sock_data_tag) +
 			sock_data->titoff + strlen(title) + 1);
-	write(sock, buffer, sizeof(struct sock_data_tag) + sock_data->titoff +
-			strlen(title) + 1);
+	write(sock, buffer, sizeof(struct sock_data_tag) +
+			sock_data->titoff + strlen(title) + 1);
 	return close(sock);
 }
 

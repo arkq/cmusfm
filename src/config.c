@@ -22,6 +22,8 @@
 #include "../config.h"
 #endif
 
+#include "config.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -30,8 +32,8 @@
 #ifdef HAVE_SYS_INOTIFY_H
 #include <sys/inotify.h>
 #endif
+
 #include "cmusfm.h"
-#include "config.h"
 
 
 // Return the pointer to the configuration value substring. This function

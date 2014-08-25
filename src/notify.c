@@ -18,10 +18,11 @@
  * see <http://www.gnu.org/licenses/>.
  */
 
-#include <libnotify/notify.h>
+#include "notify.h"
+
 #include <stdlib.h>
 #include <string.h>
-#include "notify.h"
+#include <libnotify/notify.h>
 
 
 // global notification handler
