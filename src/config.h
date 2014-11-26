@@ -31,11 +31,13 @@
 #define CMCONF_SESSION_KEY "key"
 #define CMCONF_FORMAT_LOCALFILE "format-localfile"
 #define CMCONF_FORMAT_SHOUTCAST "format-shoutcast"
+#define CMCONF_FORMAT_COVERFILE "format-coverfile"
 #define CMCONF_NOWPLAYING_LOCALFILE "now-playing-localfile"
 #define CMCONF_NOWPLAYING_SHOUTCAST "now-playing-shoutcast"
 #define CMCONF_SUBMIT_LOCALFILE "submit-localfile"
 #define CMCONF_SUBMIT_SHOUTCAST "submit-shoutcast"
 #define CMCONF_NOTIFICATION "notification"
+
 
 struct cmusfm_config {
 	char user_name[64];
@@ -44,6 +46,9 @@ struct cmusfm_config {
 	// regular expressions for name parsers
 	char format_localfile[64];
 	char format_shoutcast[64];
+#ifdef ENABLE_LIBNOTIFY
+	char format_coverfile[64];
+#endif
 
 	unsigned int nowplaying_localfile : 1;
 	unsigned int nowplaying_shoutcast : 1;

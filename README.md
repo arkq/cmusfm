@@ -42,6 +42,15 @@ self-explainable options (default is "yes" for all of them):
 * `submit-localfile = "yes"`
 * `submit-shoutcast = "no"`
 
+Cmusfm provides also one extra feature, which was mentioned earlier - desktop notifications. In
+order to have this functionality, one has to enable it during the compilation stage. Since it is
+extra, it is disabled by default in the cmusfm configuration file too. Note, that cover art file
+has to be explicitly stored in the current track's directory - embedded covers are not displayed.
+Exemplary configuration might be as follows:
+
+* `notification = "yes"`
+* `format-coverfile = "^(cover|folder)\.jpg$"`
+
 
 Instalation
 -----------

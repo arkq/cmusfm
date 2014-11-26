@@ -47,13 +47,34 @@
 #endif
 
 
-static void set_trackinfo(scrobbler_trackinfo_t *sbt, const struct sock_data_tag *dt) {
+// Helper function for artist name retrieval.
+static char *get_sock_data_artist(struct sock_data_tag *dt) {
+	return (char *)(dt + 1);
+}
+
+// Helper function for album name retrieval.
+static char *get_sock_data_album(struct sock_data_tag *dt) {
+	return &((char *)(dt + 1))[dt->alboff];
+}
+
+// Helper function for track name retrieval.
+static char *get_sock_data_track(struct sock_data_tag *dt) {
+	return &((char *)(dt + 1))[dt->titoff];
+}
+
+// Helper function for location retrieval.
+static char *get_sock_data_location(struct sock_data_tag *dt) {
+	return &((char *)(dt + 1))[dt->locoff];
+}
+
+// Copy data from the socket data into the scrobbler structure.
+static void set_trackinfo(scrobbler_trackinfo_t *sbt, struct sock_data_tag *dt) {
 	memset(sbt, 0, sizeof(*sbt));
 	sbt->duration = dt->duration;
 	sbt->track_number = dt->tracknb;
-	sbt->artist = (char *)(dt + 1);
-	sbt->album = &((char *)(dt + 1))[dt->alboff];
-	sbt->track = &((char *)(dt + 1))[dt->titoff];
+	sbt->artist = get_sock_data_artist(dt);
+	sbt->album = get_sock_data_album(dt);
+	sbt->track = get_sock_data_track(dt);
 }
 
 // Simple and fast "hashing" function.
@@ -91,9 +112,10 @@ static void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs) {
 		return;  // something was wrong...
 
 	debug("payload: %s - %s - %d. %s (%ds)",
-			(char *)(sock_data + 1), &((char *)(sock_data + 1))[sock_data->alboff],
-			sock_data->tracknb, &((char *)(sock_data + 1))[sock_data->titoff],
+			get_sock_data_artist(sock_data), get_sock_data_album(sock_data),
+			sock_data->tracknb, get_sock_data_track(sock_data),
 			sock_data->duration);
+	debug("location: %s", get_sock_data_location(sock_data));
 
 #ifdef DEBUG
 	// simulate server "hiccup" (e.g. internet connection issue)
@@ -170,7 +192,8 @@ action_nowplaying:
 
 #ifdef ENABLE_LIBNOTIFY
 				if (config.notification)
-					cmusfm_notify_show(&sb_tinf);
+					cmusfm_notify_show(&sb_tinf, get_album_cover_file(
+								get_sock_data_location(sock_data), config.format_coverfile));
 				else
 					debug("notification not enabled");
 #endif
@@ -327,10 +350,11 @@ void cmusfm_server_start(void) {
 int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
 	char buffer[CMSOCKET_BUFFER_SIZE];
-	struct sock_data_tag *sock_data = (struct sock_data_tag*)buffer;
+	struct sock_data_tag *sock_data = (struct sock_data_tag *)buffer;
 	char *artist = (char *)(sock_data + 1);
 	char *album = (char *)(sock_data + 1);
 	char *title = (char *)(sock_data + 1);
+	char *location = (char *)(sock_data + 1);
 	struct format_match *match, *matches;
 	struct sockaddr_un sock_a;
 	int sock;
@@ -397,9 +421,17 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
 	}
 
+	// update track location (localfile or shoutcast)
+	location = &title[strlen(title) + 1];
+	if (tinfo->file != NULL)
+		strcpy(location, tinfo->file);
+	else if (tinfo->url != NULL)
+		strcpy(location, tinfo->url);
+
 	// calculate data offsets
 	sock_data->alboff = album - artist;
 	sock_data->titoff = title - artist;
+	sock_data->locoff = location - artist;
 
 	// connect to the communication socket
 	memset(&sock_a, 0, sizeof(sock_a));
@@ -412,9 +444,9 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	}
 
 	debug("socket wrlen: %ld", sizeof(struct sock_data_tag) +
-			sock_data->titoff + strlen(title) + 1);
+			sock_data->titoff + sock_data->locoff + strlen(location) + 1);
 	write(sock, buffer, sizeof(struct sock_data_tag) +
-			sock_data->titoff + strlen(title) + 1);
+			sock_data->titoff + sock_data->locoff + strlen(location) + 1);
 	return close(sock);
 }
 

@@ -79,6 +79,11 @@ int cmusfm_config_read(const char *fname, struct cmusfm_config *conf) {
 	memset(conf, 0, sizeof(*conf));
 	strcpy(conf->format_localfile, "^(?A.+) - (?T.+)\\.[^.]+$");
 	strcpy(conf->format_shoutcast, "^(?A.+) - (?T.+)$");
+#ifdef ENABLE_LIBNOTIFY
+	// set the MS Windows name convention as a default - compatible with most
+	// sailors from the pirate bay
+	strcpy(conf->format_coverfile, "^folder\\.jpg$");
+#endif
 	conf->nowplaying_localfile = 1;
 	conf->nowplaying_shoutcast = 1;
 	conf->submit_localfile = 1;
@@ -105,6 +110,8 @@ int cmusfm_config_read(const char *fname, struct cmusfm_config *conf) {
 		else if (strncmp(line, CMCONF_SUBMIT_SHOUTCAST, sizeof(CMCONF_SUBMIT_SHOUTCAST) - 1) == 0)
 			conf->submit_shoutcast = decode_config_bool(get_config_value(line));
 #ifdef ENABLE_LIBNOTIFY
+		else if (strncmp(line, CMCONF_FORMAT_COVERFILE, sizeof(CMCONF_FORMAT_COVERFILE) - 1) == 0)
+			strncpy(conf->format_coverfile, get_config_value(line), sizeof(conf->format_coverfile) - 1);
 		else if (strncmp(line, CMCONF_NOTIFICATION, sizeof(CMCONF_NOTIFICATION) - 1) == 0)
 			conf->notification = decode_config_bool(get_config_value(line));
 #endif
@@ -132,6 +139,9 @@ int cmusfm_config_write(const char *fname, struct cmusfm_config *conf) {
 	fprintf(f, "\n# regular expressions for name parsers\n");
 	fprintf(f, "%s = \"%s\"\n", CMCONF_FORMAT_LOCALFILE, conf->format_localfile);
 	fprintf(f, "%s = \"%s\"\n", CMCONF_FORMAT_SHOUTCAST, conf->format_shoutcast);
+#ifdef ENABLE_LIBNOTIFY
+	fprintf(f, "%s = \"%s\"\n", CMCONF_FORMAT_COVERFILE, conf->format_coverfile);
+#endif
 
 	fprintf(f, "\n");
 	fprintf(f, "%s = \"%s\"\n", CMCONF_NOWPLAYING_LOCALFILE, encode_config_bool(conf->nowplaying_localfile));

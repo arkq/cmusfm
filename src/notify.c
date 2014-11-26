@@ -30,8 +30,8 @@ static NotifyNotification *cmus_notify;
 
 
 // Show track information via the notification system.
-void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf)
-{
+void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon) {
+
 	char *body;
 	size_t art_len, alb_len;
 
@@ -49,21 +49,19 @@ void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf)
 	if(alb_len > 0)
 		sprintf(&body[art_len], " (%s)", sb_tinf->album);
 
-	cmus_notify = notify_notification_new(sb_tinf->track, body, NULL);
+	cmus_notify = notify_notification_new(sb_tinf->track, body, icon);
 	notify_notification_show(cmus_notify, NULL);
 	free(body);
 }
 
 // Initialize notification system.
-void cmusfm_notify_initialize()
-{
+void cmusfm_notify_initialize() {
 	cmus_notify = NULL;
 	notify_init("cmusfm");
 }
 
 // Free notification system resources.
-void cmusfm_notify_free()
-{
+void cmusfm_notify_free() {
 	if(cmus_notify)
 		g_object_unref(G_OBJECT(cmus_notify));
 	notify_uninit();

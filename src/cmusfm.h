@@ -71,6 +71,9 @@ struct format_match {
 
 
 char *get_cmus_home_dir(void);
+#ifdef ENABLE_LIBNOTIFY
+char *get_album_cover_file(const char *location, const char *format);
+#endif
 struct format_match *get_regexp_format_matches(const char *str, const char *format);
 struct format_match *get_regexp_match(struct format_match *matches, enum format_match_type type);
 

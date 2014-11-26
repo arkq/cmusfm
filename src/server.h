@@ -31,10 +31,11 @@
 struct sock_data_tag {
 	enum cmstatus status;
 	int tracknb, duration;
-	int alboff, titoff;
+	int alboff, titoff, locoff;
 // char artist[];
 // char album[];
 // char title[];
+// char location[];
 }__attribute__ ((packed));
 
 
