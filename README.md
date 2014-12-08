@@ -65,7 +65,7 @@ Configuration
 -------------
 
 Before usage with the cmus music player, one have to grant access for the cmusfm in the Last.fm
-service. To to so, simply run cmusfm with the `init` argument and follow instructions. This action
+service. To do so, simply run cmusfm with the `init` argument and follow instructions. This action
 can be also required when upgrading to newer version with new features available.
 
 	$ cmusfm init
