@@ -106,10 +106,10 @@ static void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs) {
 	char raw_status;
 
 	rd_len = read(fd, buffer, sizeof(buffer));
-	debug("rdlen: %ld, status: %d", rd_len, sock_data->status);
+	debug("rdlen: %ld", rd_len);
 
 	if (rd_len < (ssize_t)sizeof(struct sock_data_tag))
-		return;  /* something was wrong... */
+		return;  /* server check or something went wrong */
 
 	debug("payload: %s - %s - %d. %s (%ds)",
 			get_sock_data_artist(sock_data), get_sock_data_album(sock_data),
@@ -249,8 +249,11 @@ static void cmusfm_server_stop(int sig) {
 	server_on = 0;
 }
 
-/* Run server instance and manage connections to it. */
-void cmusfm_server_start(void) {
+/* Check if server instance is already running. If not start new one. This
+ * function returns 0 if server was already running. If server needed to be
+ * started this function theoretically hangs forever and finally returns 1,
+ * which indicates, that server was stopped. Upon error -1 is returned. */
+int cmusfm_server_start(void) {
 
 	scrobbler_session_t *sbs;
 	struct sigaction sigact;
@@ -259,23 +262,28 @@ void cmusfm_server_start(void) {
 #ifdef HAVE_SYS_INOTIFY_H
 	struct inotify_event inot_even;
 #endif
-
-	debug("starting cmusfm server");
+	int retval;
 
 	/* setup poll structure for data reading */
 	pfds[0].events = POLLIN;  /* server */
 	pfds[1].events = POLLIN;  /* client */
 	pfds[2].events = POLLIN;  /* inotify */
 	pfds[1].fd = -1;
+	pfds[2].fd = -1;
 
 	memset(&saddr, 0, sizeof(saddr));
 	saddr.sun_family = AF_UNIX;
 	strcpy(saddr.sun_path, cmusfm_socket_file);
-	pfds[0].fd = socket(PF_UNIX, SOCK_STREAM, 0);
+	if ((pfds[0].fd = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
+		return -1;
 
-	/* check if behind the socket there is already an active server instance */
-	if (connect(pfds[0].fd, (struct sockaddr *)(&saddr), sizeof(saddr)) == 0)
-		return;
+	/* check if behind the socket there is an active server instance */
+	if (connect(pfds[0].fd, (struct sockaddr *)(&saddr), sizeof(saddr)) == 0) {
+		close(pfds[0].fd);
+		return 0;
+	}
+
+	debug("starting cmusfm server");
 
 	/* initialize scrobbling library */
 	sbs = scrobbler_initialize(SC_api_key, SC_secret);
@@ -293,17 +301,16 @@ void cmusfm_server_start(void) {
 	sigaction(SIGTERM, &sigact, NULL);
 	sigaction(SIGINT, &sigact, NULL);
 
-	/* create server communication socket (no error check) */
+	/* create server communication socket */
 	unlink(saddr.sun_path);
-	bind(pfds[0].fd, (struct sockaddr*)(&saddr), sizeof(saddr));
-	listen(pfds[0].fd, 2);
+	if (bind(pfds[0].fd, (struct sockaddr *)(&saddr), sizeof(saddr)) == -1 ||
+			listen(pfds[0].fd, 2) == -1)
+		goto return_failure;
 
 #ifdef HAVE_SYS_INOTIFY_H
 	/* initialize inode notification to watch changes in the config file */
 	pfds[2].fd = inotify_init();
 	cmusfm_config_add_watch(pfds[2].fd);
-#else
-	pfds[2].fd = -1;
 #endif
 
 	debug("entering server main loop");
@@ -335,6 +342,14 @@ void cmusfm_server_start(void) {
 #endif
 	}
 
+	retval = 1;
+	goto return_success;
+
+return_failure:
+	retval = -1;
+
+return_success:
+
 	close(pfds[0].fd);
 #ifdef HAVE_SYS_INOTIFY_H
 	close(pfds[2].fd);
@@ -344,6 +359,8 @@ void cmusfm_server_start(void) {
 #endif
 	scrobbler_free(sbs);
 	unlink(saddr.sun_path);
+
+	return retval;
 }
 
 /* Send track info to server instance. */

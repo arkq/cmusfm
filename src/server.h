@@ -1,6 +1,6 @@
 /*
  * cmusfm - server.h
- * Copyright (c) 2014 Arkadiusz Bokowy
+ * Copyright (c) 2014-2015 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -24,7 +24,7 @@
 #include "cmusfm.h"
 
 
-// communication socket read/write buffer size
+/* communication socket buffer size */
 #define CMSOCKET_BUFFER_SIZE 1024
 
 #define CMSTATUS_SHOUTCASTMASK 0xF0
@@ -32,15 +32,15 @@ struct sock_data_tag {
 	enum cmstatus status;
 	int tracknb, duration;
 	int alboff, titoff, locoff;
-// char artist[];
-// char album[];
-// char title[];
-// char location[];
+/* char artist[]; */
+/* char album[]; */
+/* char title[]; */
+/* char location[]; */
 }__attribute__ ((packed));
 
 
 char *get_cmusfm_socket_file(void);
-void cmusfm_server_start(void);
+int cmusfm_server_start(void);
 int cmusfm_server_send_track(struct cmtrack_info *tinfo);
 
 #endif

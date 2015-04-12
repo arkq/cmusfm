@@ -23,6 +23,8 @@
 #endif
 
 #include "cmusfm.h"
+
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,12 +50,18 @@ const char *cmusfm_socket_file = NULL;
 struct cmusfm_config config;
 
 
-// Parse arguments which we've get from the cmus.
-static int parse_argv(struct cmtrack_info *tinfo, int argc, char *argv[]) {
+/* Parse status arguments which we've get from the cmus and return track info
+ * structure. Upon error NULL is returned and errno is set appropriately. */
+static struct cmtrack_info *get_track_info(int argc, char *argv[]) {
 
+	struct cmtrack_info *tinfo;
 	int i;
 
+	if ((tinfo = malloc(sizeof(*tinfo))) == NULL)
+		return NULL;
+
 	memset(tinfo, 0, sizeof(*tinfo));
+	tinfo->status = CMSTATUS_UNDEFINED;
 
 	for (i = 1; i + 1 < argc; i += 2) {
 		debug("cmus argv: %s %s", argv[i], argv[i + 1]);
@@ -81,16 +89,14 @@ static int parse_argv(struct cmtrack_info *tinfo, int argc, char *argv[]) {
 			tinfo->duration = atoi(argv[i + 1]);
 	}
 
-	// NOTE: cmus always passes status parameter
-	if (tinfo->status == CMSTATUS_UNDEFINED)
-		return -1;
+	/* NOTE: cmus always passes status parameter */
+	if (tinfo->status == CMSTATUS_UNDEFINED) {
+		free(tinfo);
+		errno = EINVAL;
+		return NULL;
+	}
 
-	// check for required fields
-	if (tinfo->file != NULL || tinfo->url != NULL)
-		return 0;
-
-	// initial call from cmus
-	return 1;
+	return tinfo;
 }
 
 // User authorization callback for the initialization process.
@@ -147,9 +153,10 @@ static int cmusfm_initialization() {
 
 int main(int argc, char *argv[]) {
 
-	struct cmtrack_info tinfo;
+	struct cmtrack_info *tinfo;
 
-	if (argc == 1) {  /* print initialization help message */
+	/* print initialization help message */
+	if (argc == 1) {
 		printf("usage: %s [init]\n\n"
 "NOTE: Before usage with the cmus you should invoke this program with the\n"
 "      `init` argument. Afterwards you can set the status_display_program\n"
@@ -170,16 +177,22 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	switch (parse_argv(&tinfo, argc, argv)) {
+	/* try to parse cmus status display program arguments */
+	if ((tinfo = get_track_info(argc, argv)) == NULL) {
+		perror("error: get track info");
+		return EXIT_FAILURE;
+	}
+
+	switch (cmusfm_server_start()) {
 	case -1:
-		fprintf(stderr, "error: arguments parsing failed\n");
+		perror("error: start server");
 		return EXIT_FAILURE;
 	case 1:
-		cmusfm_server_start();
+		/* server has been shut down */
 		return EXIT_SUCCESS;
 	}
 
-	if (cmusfm_server_send_track(&tinfo)) {
+	if (cmusfm_server_send_track(tinfo)) {
 		fprintf(stderr, "error: sending track to server failed\n");
 		return EXIT_FAILURE;
 	}
