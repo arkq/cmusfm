@@ -58,10 +58,9 @@ static struct cmtrack_info *get_track_info(int argc, char *argv[]) {
 	struct cmtrack_info *tinfo;
 	int i;
 
-	if ((tinfo = malloc(sizeof(*tinfo))) == NULL)
+	if ((tinfo = calloc(1, sizeof(*tinfo))) == NULL)
 		return NULL;
 
-	memset(tinfo, 0, sizeof(*tinfo));
 	tinfo->status = CMSTATUS_UNDEFINED;
 
 	for (i = 1; i + 1 < argc; i += 2) {

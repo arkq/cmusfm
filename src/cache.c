@@ -39,16 +39,15 @@ static size_t get_cache_record_size(const struct cmusfm_cache_record *record) {
 		record->album_artist_len + record->track_len + record->mbid_len;
 }
 
-// Copy scrobbler track info into the cache record structure. Returned
-// pointer has to be freed by the `free` function.
+/* Copy scrobbler track info into the cache record structure. Returned
+ * pointer has to be freed by the `free` function. */
 struct cmusfm_cache_record *get_cache_record(const scrobbler_trackinfo_t *sb_tinf) {
 
 	struct cmusfm_cache_record *cr;
 	char *ptr;
 
-	// allocate memory for initial record data (header)
-	cr = (struct cmusfm_cache_record*)malloc(sizeof(*cr));
-	memset(cr, 0, sizeof(*cr));
+	/* allocate memory for initial record data (header) */
+	cr = (struct cmusfm_cache_record *)calloc(1, sizeof(*cr));
 
 	cr->signature = CMUSFM_CACHE_SIGNATURE;
 	cr->timestamp = sb_tinf->timestamp;
@@ -65,7 +64,7 @@ struct cmusfm_cache_record *get_cache_record(const scrobbler_trackinfo_t *sb_tin
 //	if (sb_tinf->mbid)
 //		cr->mbid_len = strlen(sb_tinf->mbid) + 1;
 
-	// enlarge allocated memory for string data payload
+	/* enlarge allocated memory for string data payload */
 	cr = (struct cmusfm_cache_record *)realloc(cr, get_cache_record_size(cr));
 	ptr = (char *)&cr[1];
 
