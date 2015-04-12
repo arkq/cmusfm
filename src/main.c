@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "cache.h"
 #include "config.h"
@@ -99,7 +100,7 @@ static struct cmtrack_info *get_track_info(int argc, char *argv[]) {
 	return tinfo;
 }
 
-// User authorization callback for the initialization process.
+/* User authorization callback for the initialization process. */
 static int user_authorization(const char *url) {
 	printf("Open this URL in your favorite web browser and afterwards "
 			"press ENTER:\n  %s\n", url);
@@ -107,9 +108,9 @@ static int user_authorization(const char *url) {
 	return 0;
 }
 
-// Initialization routine. Get Last.fm session key from the scrobbler service
-// and initialize configuration file with default values (if needed).
-static int cmusfm_initialization() {
+/* Initialization routine. Get Last.fm session key from the scrobbler service
+ * and initialize configuration file with default values (if needed). */
+static void cmusfm_initialization(void) {
 
 	scrobbler_session_t *sbs;
 	struct cmusfm_config conf;
@@ -119,7 +120,7 @@ static int cmusfm_initialization() {
 	fetch_session_key = 1;
 	sbs = scrobbler_initialize(SC_api_key, SC_secret);
 
-	// try to read previous configuration
+	/* try to read previous configuration */
 	if (cmusfm_config_read(cmusfm_config_file, &conf) == 0) {
 		printf("Checking previous session (user: %s) ...", conf.user_name);
 		fflush(stdout);
@@ -135,7 +136,7 @@ static int cmusfm_initialization() {
 			fetch_session_key = 0;
 	}
 
-	if (fetch_session_key) {  // fetch new session key
+	if (fetch_session_key) {  /* fetch new session key */
 		if (scrobbler_authentication(sbs, user_authorization) == 0) {
 			scrobbler_get_session_key_str(sbs, conf.session_key);
 			strncpy(conf.user_name, sbs->user_name, sizeof(conf.user_name) - 1);
@@ -147,8 +148,25 @@ static int cmusfm_initialization() {
 
 	if (cmusfm_config_write(cmusfm_config_file, &conf) != 0)
 		printf("Error: unable to write file: %s\n", cmusfm_config_file);
+}
 
-	return 0;
+/* Spawn server process of cmusfm by simply forking ourself and exec with
+ * special "server" argument. */
+static void cmusfm_spawn_server_process(const char *cmusfm) {
+
+	pid_t pid;
+
+	if ((pid = fork()) == -1) {
+		perror("error: fork server");
+		exit(EXIT_FAILURE);
+	}
+
+	if (pid == 0) {
+		execlp(cmusfm, cmusfm, "server", NULL);
+		perror("error: exec server");
+		exit(EXIT_FAILURE);
+	}
+
 }
 
 int main(int argc, char *argv[]) {
@@ -169,13 +187,18 @@ int main(int argc, char *argv[]) {
 	cmusfm_config_file = get_cmusfm_config_file();
 	cmusfm_socket_file = get_cmusfm_socket_file();
 
-	if (argc == 2 && strcmp(argv[1], "init") == 0)
-		return cmusfm_initialization();
+	if (argc == 2 && strcmp(argv[1], "init") == 0) {
+		cmusfm_initialization();
+		return EXIT_SUCCESS;
+	}
 
 	if (cmusfm_config_read(cmusfm_config_file, &config) == -1) {
 		perror("error: config read");
 		return EXIT_FAILURE;
 	}
+
+	if (argc == 2 && strcmp(argv[1], "server") == 0)
+		return cmusfm_server_start();
 
 	/* try to parse cmus status display program arguments */
 	if ((tinfo = get_track_info(argc, argv)) == NULL) {
@@ -183,13 +206,9 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	switch (cmusfm_server_start()) {
-	case -1:
-		perror("error: start server");
-		return EXIT_FAILURE;
-	case 1:
-		/* server has been shut down */
-		return EXIT_SUCCESS;
+	if (cmusfm_server_check() == 0) {
+		cmusfm_spawn_server_process(argv[0]);
+		sleep(1);
 	}
 
 	if (cmusfm_server_send_track(tinfo)) {

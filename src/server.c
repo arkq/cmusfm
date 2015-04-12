@@ -241,6 +241,30 @@ action_nowplaying:
 	}
 }
 
+/* Check if server instance is running. If yes, this function returns 1,
+ * otherwise 0 is returned. On error -1 is returned and errno is set
+ * appropriately. */
+int cmusfm_server_check(void) {
+
+	struct sockaddr_un saddr;
+	int fd;
+
+	memset(&saddr, 0, sizeof(saddr));
+	saddr.sun_family = AF_UNIX;
+	strcpy(saddr.sun_path, cmusfm_socket_file);
+
+	if ((fd = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
+		return -1;
+
+	/* check if behind the socket there is an active server instance */
+	if (connect(fd, (struct sockaddr *)(&saddr), sizeof(saddr)) == 0) {
+		close(fd);
+		return 1;
+	}
+
+	return 0;
+}
+
 /* server shutdown stuff */
 static int server_on = 1;
 static void cmusfm_server_stop(int sig) {
@@ -249,10 +273,8 @@ static void cmusfm_server_stop(int sig) {
 	server_on = 0;
 }
 
-/* Check if server instance is already running. If not start new one. This
- * function returns 0 if server was already running. If server needed to be
- * started this function theoretically hangs forever and finally returns 1,
- * which indicates, that server was stopped. Upon error -1 is returned. */
+/* Start server instance. This function hangs until server is stopped.
+ * Upon error -1 is returned. */
 int cmusfm_server_start(void) {
 
 	scrobbler_session_t *sbs;
@@ -263,6 +285,8 @@ int cmusfm_server_start(void) {
 	struct inotify_event inot_even;
 #endif
 	int retval;
+
+	debug("starting cmusfm server");
 
 	/* setup poll structure for data reading */
 	pfds[0].events = POLLIN;  /* server */
@@ -276,14 +300,6 @@ int cmusfm_server_start(void) {
 	strcpy(saddr.sun_path, cmusfm_socket_file);
 	if ((pfds[0].fd = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
 		return -1;
-
-	/* check if behind the socket there is an active server instance */
-	if (connect(pfds[0].fd, (struct sockaddr *)(&saddr), sizeof(saddr)) == 0) {
-		close(pfds[0].fd);
-		return 0;
-	}
-
-	debug("starting cmusfm server");
 
 	/* initialize scrobbling library */
 	sbs = scrobbler_initialize(SC_api_key, SC_secret);
@@ -342,7 +358,7 @@ int cmusfm_server_start(void) {
 #endif
 	}
 
-	retval = 1;
+	retval = 0;
 	goto return_success;
 
 return_failure:

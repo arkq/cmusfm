@@ -40,6 +40,7 @@ struct sock_data_tag {
 
 
 char *get_cmusfm_socket_file(void);
+int cmusfm_server_check(void);
 int cmusfm_server_start(void);
 int cmusfm_server_send_track(struct cmtrack_info *tinfo);
 
