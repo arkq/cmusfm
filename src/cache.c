@@ -1,6 +1,6 @@
 /*
  * cmusfm - cache.c
- * Copyright (c) 2014 Arkadiusz Bokowy
+ * Copyright (c) 2014-2015 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -104,7 +104,7 @@ void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf) {
 			sb_tinf->artist, sb_tinf->album, sb_tinf->album_artist,
 			sb_tinf->track_number, sb_tinf->track, sb_tinf->duration);
 
-	if ((f = fopen(get_cmusfm_cache_file(), "a")) == NULL)
+	if ((f = fopen(cmusfm_cache_file, "a")) == NULL)
 		return;
 
 	record = get_cache_record(sb_tinf);
@@ -118,7 +118,6 @@ void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf) {
 void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 
 	char rd_buff[4096];
-	char *fname;
 	FILE *f;
 	scrobbler_trackinfo_t sb_tinf;
 	struct cmusfm_cache_record *record;
@@ -127,8 +126,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 
 	debug("cache submit");
 
-	fname = get_cmusfm_cache_file();
-	if ((f = fopen(fname, "r")) == NULL)
+	if ((f = fopen(cmusfm_cache_file, "r")) == NULL)
 		return;
 
 	// read file until EOF
@@ -200,12 +198,10 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 	fclose(f);
 
 	// remove cache file
-	unlink(fname);
+	unlink(cmusfm_cache_file);
 }
 
-// Helper function for retrieving cmusfm cache file.
+/* Helper function for retrieving cmusfm cache file. */
 char *get_cmusfm_cache_file(void) {
-	static char fname[128];
-	sprintf(fname, "%s/" CACHE_FNAME, get_cmus_home_dir());
-	return fname;
+	return get_cmus_home_file(CACHE_FNAME);
 }

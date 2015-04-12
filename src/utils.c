@@ -1,6 +1,6 @@
 /*
  * cmusfm - utils.c
- * Copyright (c) 2014 Arkadiusz Bokowy
+ * Copyright (c) 2014-2015 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -22,33 +22,57 @@
 #include "../config.h"
 #endif
 
+#include "cmusfm.h"
+
+#include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <regex.h>
 #ifdef ENABLE_LIBNOTIFY
 #include <dirent.h>
 #include <libgen.h>
 #endif
 
-#include "cmusfm.h"
 #include "debug.h"
 
 
-// Helper function for retrieving cmus configuration home path.
+/* Helper function for retrieving cmus configuration home path. */
 char *get_cmus_home_dir(void) {
 
-	static char fname[128];
-	char *xdg_config;
+	const char cmusdir[] = "/cmus";
+	char *fullpath;
+	char *tmp;
 
-	// get XDG config directory or fall-back to the default
-	xdg_config = getenv("XDG_CONFIG_HOME");
-	if (xdg_config)
-		strcpy(fname, xdg_config);
-	else
-		sprintf(fname, "%s/.config", getenv("HOME"));
+	/* get our file path in the XDG configuration directory */
+	if ((tmp = getenv("XDG_CONFIG_HOME")) != NULL) {
+		fullpath = malloc(strlen(tmp) + sizeof(cmusdir));
+		sprintf(fullpath, "%s%s", tmp, cmusdir);
+		return fullpath;
+	}
 
-	return strcat(fname, "/cmus");
+	if ((tmp = getenv("HOME")) != NULL) {
+		fullpath = malloc(strlen(tmp) + 8 + sizeof(cmusdir));
+		sprintf(fullpath, "%s/.config%s", tmp, cmusdir);
+		return fullpath;
+	}
+
+	/* semi failproof return */
+	return strdup(cmusdir);
+}
+
+/* Helper function for retrieving a path for given file inside the cmus
+ * configuration home path. */
+char *get_cmus_home_file(const char *file) {
+
+	char *home;
+	char *fullpath;
+
+	home = get_cmus_home_dir();
+	fullpath = malloc(strlen(home) + 1 + strlen(file) + 1);
+	sprintf(fullpath, "%s/%s", home, file);
+
+	free(home);
+	return fullpath;
 }
 
 #ifdef ENABLE_LIBNOTIFY

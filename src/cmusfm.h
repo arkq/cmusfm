@@ -1,6 +1,6 @@
 /*
  * cmusfm - cmusfm.h
- * Copyright (c) 2010-2014 Arkadiusz Bokowy
+ * Copyright (c) 2010-2015 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -30,14 +30,17 @@
 #define CACHE_FNAME  "cmusfm.cache"
 
 
-// time delay (in seconds) between login attempts to the Last.fm
-// scrobbling service after a submit failure
+/* time delay (in seconds) between login attempts to the Last.fm
+ * scrobbling service after a submit failure */
 #define SERVICE_RETRY_DELAY 60 * 30
 
 
-// global variable definitions
+/* global variable definitions */
 extern unsigned char SC_api_key[16];
 extern unsigned char SC_secret[16];
+extern const char *cmusfm_cache_file;
+extern const char *cmusfm_config_file;
+extern const char *cmusfm_socket_file;
 extern struct cmusfm_config config;
 
 
@@ -71,6 +74,7 @@ struct format_match {
 
 
 char *get_cmus_home_dir(void);
+char *get_cmus_home_file(const char *file);
 #ifdef ENABLE_LIBNOTIFY
 char *get_album_cover_file(const char *location, const char *format);
 #endif

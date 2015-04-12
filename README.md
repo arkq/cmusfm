@@ -52,8 +52,8 @@ Exemplary configuration might be as follows:
 * `format-coverfile = "^(cover|folder)\.jpg$"`
 
 
-Instalation
------------
+Installation
+------------
 
 	$ autoreconf --install
 	$ mkdir build && cd build

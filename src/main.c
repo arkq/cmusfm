@@ -1,6 +1,6 @@
 /*
  * cmusfm - main.c
- * Copyright (c) 2010-2014 Arkadiusz Bokowy
+ * Copyright (c) 2010-2015 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -22,23 +22,29 @@
 #include "../config.h"
 #endif
 
+#include "cmusfm.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "cmusfm.h"
+#include "cache.h"
 #include "config.h"
 #include "debug.h"
 #include "server.h"
 
 
-// Last.fm API key for cmusfm
+/* Last.fm API key for cmusfm */
 unsigned char SC_api_key[16] = {0x67, 0x08, 0x2e, 0x45, 0xda, 0xb1,
 		0xf6, 0x43, 0x3d, 0xa7, 0x2a, 0x00, 0xe3, 0xbc, 0x03, 0x7a};
 unsigned char SC_secret[16] = {0x02, 0xfc, 0xbc, 0x90, 0x34, 0x1a,
 		0x01, 0xf2, 0x1c, 0x3b, 0xfc, 0x05, 0xb6, 0x36, 0xe3, 0xae};
 
-// Global configuration structure
+/* Global cmusfm file location variables */
+const char *cmusfm_cache_file = NULL;
+const char *cmusfm_config_file = NULL;
+const char *cmusfm_socket_file = NULL;
+
+/* Global configuration structure */
 struct cmusfm_config config;
 
 
@@ -102,15 +108,13 @@ static int cmusfm_initialization() {
 	scrobbler_session_t *sbs;
 	struct cmusfm_config conf;
 	int fetch_session_key;
-	char *conf_fname;
 	char yesno[8], *ptr;
 
 	fetch_session_key = 1;
-	conf_fname = get_cmusfm_config_file();
 	sbs = scrobbler_initialize(SC_api_key, SC_secret);
 
 	// try to read previous configuration
-	if (cmusfm_config_read(conf_fname, &conf) == 0) {
+	if (cmusfm_config_read(cmusfm_config_file, &conf) == 0) {
 		printf("Checking previous session (user: %s) ...", conf.user_name);
 		fflush(stdout);
 		scrobbler_set_session_key_str(sbs, conf.session_key);
@@ -135,8 +139,8 @@ static int cmusfm_initialization() {
 	}
 	scrobbler_free(sbs);
 
-	if (cmusfm_config_write(conf_fname, &conf) != 0)
-		printf("Error: unable to write file: %s\n", conf_fname);
+	if (cmusfm_config_write(cmusfm_config_file, &conf) != 0)
+		printf("Error: unable to write file: %s\n", cmusfm_config_file);
 
 	return 0;
 }
@@ -153,11 +157,16 @@ int main(int argc, char *argv[]) {
 		return EXIT_SUCCESS;
 	}
 
+	/* setup global variables - file locations */
+	cmusfm_cache_file = get_cmusfm_cache_file();
+	cmusfm_config_file = get_cmusfm_config_file();
+	cmusfm_socket_file = get_cmusfm_socket_file();
+
 	if (argc == 2 && strcmp(argv[1], "init") == 0)
 		return cmusfm_initialization();
 
-	if (cmusfm_config_read(get_cmusfm_config_file(), &config) == -1) {
-		perror("error: unable to read config file");
+	if (cmusfm_config_read(cmusfm_config_file, &config) == -1) {
+		perror("error: config read");
 		return EXIT_FAILURE;
 	}
 

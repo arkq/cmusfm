@@ -1,6 +1,6 @@
 /*
  * cmusfm - config.c
- * Copyright (c) 2014 Arkadiusz Bokowy
+ * Copyright (c) 2014-2015 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -24,10 +24,10 @@
 
 #include "config.h"
 
-#include <stdio.h>
-#include <string.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
 #include <sys/stat.h>
 #ifdef HAVE_SYS_INOTIFY_H
 #include <sys/inotify.h>
@@ -156,17 +156,15 @@ int cmusfm_config_write(const char *fname, struct cmusfm_config *conf) {
 }
 
 #ifdef HAVE_SYS_INOTIFY_H
-// Add the cmusfm configuration file into the inotify watch stack. File
-// is watched for modification, and after event is triggered it will be
-// automatically removed from the stack.
+/* Add the cmusfm configuration file into the inotify watch stack. File
+ * is watched for modification, and after event is triggered it will be
+ * automatically removed from the stack. */
 int cmusfm_config_add_watch(int fd) {
-	return inotify_add_watch(fd, get_cmusfm_config_file(), IN_MODIFY | IN_ONESHOT);
+	return inotify_add_watch(fd, cmusfm_config_file, IN_MODIFY | IN_ONESHOT);
 }
 #endif
 
-// Helper function for retrieving cmusfm configuration file.
+/* Helper function for retrieving cmusfm configuration file. */
 char *get_cmusfm_config_file(void) {
-	static char fname[128];
-	sprintf(fname, "%s/" CONFIG_FNAME, get_cmus_home_dir());
-	return fname;
+	return get_cmus_home_file(CONFIG_FNAME);
 }

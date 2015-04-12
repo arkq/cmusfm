@@ -1,6 +1,6 @@
 /*
  * cmusfm - server.c
- * Copyright (c) 2010-2014 Arkadiusz Bokowy
+ * Copyright (c) 2010-2015 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -24,14 +24,14 @@
 
 #include "server.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <poll.h>
 #include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #ifdef HAVE_SYS_INOTIFY_H
@@ -47,22 +47,22 @@
 #endif
 
 
-// Helper function for artist name retrieval.
+/* Helper function for artist name retrieval. */
 static char *get_sock_data_artist(struct sock_data_tag *dt) {
 	return (char *)(dt + 1);
 }
 
-// Helper function for album name retrieval.
+/* Helper function for album name retrieval. */
 static char *get_sock_data_album(struct sock_data_tag *dt) {
 	return &((char *)(dt + 1))[dt->alboff];
 }
 
-// Helper function for track name retrieval.
+/* Helper function for track name retrieval. */
 static char *get_sock_data_track(struct sock_data_tag *dt) {
 	return &((char *)(dt + 1))[dt->titoff];
 }
 
-// Helper function for location retrieval.
+/* Helper function for location retrieval. */
 static char *get_sock_data_location(struct sock_data_tag *dt) {
 	return &((char *)(dt + 1))[dt->locoff];
 }
@@ -270,7 +270,7 @@ void cmusfm_server_start(void) {
 
 	memset(&sock_a, 0, sizeof(sock_a));
 	sock_a.sun_family = AF_UNIX;
-	strcpy(sock_a.sun_path, get_cmusfm_socket_file());
+	strcpy(sock_a.sun_path, cmusfm_socket_file);
 	pfds[0].fd = socket(PF_UNIX, SOCK_STREAM, 0);
 
 	// check if behind the socket there is already an active server instance
@@ -329,7 +329,7 @@ void cmusfm_server_start(void) {
 			// to us, simply read out the inotify file descriptor
 			read(pfds[2].fd, &inot_even, sizeof(inot_even));
 			debug("inotify event occurred: %x", inot_even.mask);
-			cmusfm_config_read(get_cmusfm_config_file(), &config);
+			cmusfm_config_read(cmusfm_config_file, &config);
 			cmusfm_config_add_watch(pfds[2].fd);
 		}
 #endif
@@ -435,7 +435,7 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
 	// connect to the communication socket
 	memset(&sock_a, 0, sizeof(sock_a));
-	strcpy(sock_a.sun_path, get_cmusfm_socket_file());
+	strcpy(sock_a.sun_path, cmusfm_socket_file);
 	sock_a.sun_family = AF_UNIX;
 	sock = socket(PF_UNIX, SOCK_STREAM, 0);
 	if (connect(sock, (struct sockaddr *)(&sock_a), sizeof(sock_a)) == -1) {
@@ -450,9 +450,7 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	return close(sock);
 }
 
-// Helper function for retrieving cmusfm server socket file.
+/* Helper function for retrieving cmusfm server socket file. */
 char *get_cmusfm_socket_file(void) {
-	static char fname[128];
-	sprintf(fname, "%s/" SOCKET_FNAME, get_cmus_home_dir());
-	return fname;
+	return get_cmus_home_file(SOCKET_FNAME);
 }
