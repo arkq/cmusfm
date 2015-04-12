@@ -67,7 +67,7 @@ static char *get_sock_data_location(struct sock_data_tag *dt) {
 	return &((char *)(dt + 1))[dt->locoff];
 }
 
-// Copy data from the socket data into the scrobbler structure.
+/* Copy data from the socket data into the scrobbler structure. */
 static void set_trackinfo(scrobbler_trackinfo_t *sbt, struct sock_data_tag *dt) {
 	memset(sbt, 0, sizeof(*sbt));
 	sbt->duration = dt->duration;
@@ -77,7 +77,7 @@ static void set_trackinfo(scrobbler_trackinfo_t *sbt, struct sock_data_tag *dt) 
 	sbt->track = get_sock_data_track(dt);
 }
 
-// Simple and fast "hashing" function.
+/* Simple and fast "hashing" function. */
 static int make_data_hash(const unsigned char *data, int len) {
 	int x, hash;
 	for (x = hash = 0; x < len; x++)
@@ -85,7 +85,7 @@ static int make_data_hash(const unsigned char *data, int len) {
 	return hash;
 }
 
-// Process real server task - Last.fm submission.
+/* Process real server task - Last.fm submission. */
 static void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs) {
 
 	static char saved_data[CMSOCKET_BUFFER_SIZE];
@@ -95,7 +95,7 @@ static void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs) {
 	struct sock_data_tag *sock_data = (struct sock_data_tag *)buffer;
 	ssize_t rd_len;
 
-	// scrobbler stuff
+	/* scrobbler stuff */
 	static time_t scrobbler_fail_time = 1;
 	static time_t started = 0, paused = 0, unpaused = 0;
 	static time_t playtime = 0, fulltime = 10;
@@ -109,7 +109,7 @@ static void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs) {
 	debug("rdlen: %ld, status: %d", rd_len, sock_data->status);
 
 	if (rd_len < (ssize_t)sizeof(struct sock_data_tag))
-		return;  // something was wrong...
+		return;  /* something was wrong... */
 
 	debug("payload: %s - %s - %d. %s (%ds)",
 			get_sock_data_artist(sock_data), get_sock_data_album(sock_data),
@@ -118,41 +118,41 @@ static void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs) {
 	debug("location: %s", get_sock_data_location(sock_data));
 
 #ifdef DEBUG
-	// simulate server "hiccup" (e.g. internet connection issue)
+	/* simulate server "hiccup" (e.g. internet connection issue) */
 	debug("server hiccup test (5s)");
 	sleep(5);
 #endif
 
-	// make data hash without status field
+	/* make data hash without status field */
 	new_hash = make_data_hash((unsigned char*)&buffer[1], rd_len - 1);
 
 	raw_status = sock_data->status & ~CMSTATUS_SHOUTCASTMASK;
 
-	// test connection to server (on failure try again in some time)
+	/* test connection to server (on failure try again in some time) */
 	if (scrobbler_fail_time != 0 &&
 			time(NULL) - scrobbler_fail_time > SERVICE_RETRY_DELAY) {
-		if (scrobbler_test_session_key(sbs) == 0) {  // everything should be OK now
+		if (scrobbler_test_session_key(sbs) == 0) {  /* everything should be OK now */
 			scrobbler_fail_time = 0;
 
-			// if there is something in cache submit it
+			/* if there is something in cache submit it */
 			cmusfm_cache_submit(sbs);
 		}
 		else
 			scrobbler_fail_time = time(NULL);
 	}
 
-	if (new_hash != prev_hash) {  // maybe it's time to submit :)
+	if (new_hash != prev_hash) {  /* maybe it's time to submit :) */
 		prev_hash = new_hash;
 action_submit:
 		playtime += time(NULL) - unpaused;
 		if (started != 0 && (playtime * 100 / fulltime > 50 || playtime > 240)) {
-			// playing duration is OK so submit track
+			/* playing duration is OK so submit track */
 			set_trackinfo(&sb_tinf, (struct sock_data_tag*)saved_data);
 			sb_tinf.timestamp = started;
 
 			if ((saved_is_radio && !config.submit_shoutcast) ||
 					(!saved_is_radio && !config.submit_localfile)) {
-				// skip submission if we don't want it
+				/* skip submission if we don't want it */
 				debug("submission not enabled");
 				goto action_submit_skip;
 			}
@@ -163,7 +163,7 @@ action_submit:
 					goto action_submit_failed;
 				}
 			}
-			else  // write data to cache
+			else  /* write data to cache */
 action_submit_failed:
 				cmusfm_cache_update(&sb_tinf);
 		}
@@ -172,17 +172,17 @@ action_submit_skip:
 		if (raw_status == CMSTATUS_STOPPED)
 			started = 0;
 		else {
-			// reinitialize variables, save track info in save_data
+			/* reinitialize variables, save track info in save_data */
 			started = unpaused = time(NULL);
 			playtime = paused = 0;
 
 			if ((sock_data->status & CMSTATUS_SHOUTCASTMASK) != 0)
-				// you have to listen radio min 90s (50% of 180)
-				fulltime = 180;  // overrun DEVBYZERO in URL mode :)
+				/* you have to listen radio min 90s (50% of 180) */
+				fulltime = 180;  /* overrun DEVBYZERO in URL mode :) */
 			else
 				fulltime = sock_data->duration;
 
-			// save information for later submission purpose
+			/* save information for later submission purpose */
 			memcpy(saved_data, sock_data, rd_len);
 			saved_is_radio = sock_data->status & CMSTATUS_SHOUTCASTMASK;
 
@@ -198,7 +198,7 @@ action_nowplaying:
 					debug("notification not enabled");
 #endif
 
-				// update now-playing indicator
+				/* update now-playing indicator */
 				if (scrobbler_fail_time == 0) {
 					if ((saved_is_radio && config.nowplaying_shoutcast) ||
 							(!saved_is_radio && config.nowplaying_localfile)) {
@@ -212,7 +212,7 @@ action_nowplaying:
 			}
 		}
 	}
-	else {  // new_hash == prev_hash
+	else {  /* new_hash == prev_hash */
 		if (raw_status == CMSTATUS_STOPPED)
 			goto action_submit;
 
@@ -221,18 +221,18 @@ action_nowplaying:
 			playtime += paused - unpaused;
 		}
 
-		// NOTE: There is no possibility to distinguish between replayed track
-		//       and unpaused. We assumed that if track was paused before, this
-		//       indicates that track is continued to play (unpaused). In other
-		//       case track is played again, so we should submit previous play.
+		/* NOTE: There is no possibility to distinguish between replayed track
+		 *       and unpaused. We assumed that if track was paused before, this
+		 *       indicates that track is continued to play (unpaused). In other
+		 *       case track is played again, so we should submit previous play. */
 		if (raw_status == CMSTATUS_PLAYING) {
 			if (paused) {
 				unpaused = time(NULL);
 				pausedtime = unpaused - paused;
 				paused = 0;
 				if (pausedtime > 120)
-					// if playing was paused for more then 120 seconds, reinitialize
-					// now playing notification (scrobbler and libnotify)
+					/* If playing was paused for more then 120 seconds, reinitialize
+					 * now playing notification (scrobbler and libnotify). */
 					goto action_nowplaying;
 			}
 			else
@@ -241,7 +241,7 @@ action_nowplaying:
 	}
 }
 
-// server shutdown stuff
+/* server shutdown stuff */
 static int server_on = 1;
 static void cmusfm_server_stop(int sig) {
 	(void)sig;
@@ -249,12 +249,12 @@ static void cmusfm_server_stop(int sig) {
 	server_on = 0;
 }
 
-// Run server instance and manage connections to it.
+/* Run server instance and manage connections to it. */
 void cmusfm_server_start(void) {
 
 	scrobbler_session_t *sbs;
 	struct sigaction sigact;
-	struct sockaddr_un sock_a;
+	struct sockaddr_un saddr;
 	struct pollfd pfds[3];
 #ifdef HAVE_SYS_INOTIFY_H
 	struct inotify_event inot_even;
@@ -262,44 +262,44 @@ void cmusfm_server_start(void) {
 
 	debug("starting cmusfm server");
 
-	// setup poll structure for data reading
-	pfds[0].events = POLLIN;  // server
-	pfds[1].events = POLLIN;  // client
-	pfds[2].events = POLLIN;  // inotify
+	/* setup poll structure for data reading */
+	pfds[0].events = POLLIN;  /* server */
+	pfds[1].events = POLLIN;  /* client */
+	pfds[2].events = POLLIN;  /* inotify */
 	pfds[1].fd = -1;
 
-	memset(&sock_a, 0, sizeof(sock_a));
-	sock_a.sun_family = AF_UNIX;
-	strcpy(sock_a.sun_path, cmusfm_socket_file);
+	memset(&saddr, 0, sizeof(saddr));
+	saddr.sun_family = AF_UNIX;
+	strcpy(saddr.sun_path, cmusfm_socket_file);
 	pfds[0].fd = socket(PF_UNIX, SOCK_STREAM, 0);
 
-	// check if behind the socket there is already an active server instance
-	if (connect(pfds[0].fd, (struct sockaddr*)(&sock_a), sizeof(sock_a)) == 0)
+	/* check if behind the socket there is already an active server instance */
+	if (connect(pfds[0].fd, (struct sockaddr *)(&saddr), sizeof(saddr)) == 0)
 		return;
 
-	// initialize scrobbling library
+	/* initialize scrobbling library */
 	sbs = scrobbler_initialize(SC_api_key, SC_secret);
 	scrobbler_set_session_key_str(sbs, config.session_key);
 
 #ifdef ENABLE_LIBNOTIFY
-	// initialize notification library
+	/* initialize notification library */
 	cmusfm_notify_initialize();
 #endif
 
-	// catch signals which are used to quit server
+	/* catch signals which are used to quit server */
 	memset(&sigact, 0, sizeof(sigact));
 	sigact.sa_handler = cmusfm_server_stop;
 	sigaction(SIGHUP, &sigact, NULL);
 	sigaction(SIGTERM, &sigact, NULL);
 	sigaction(SIGINT, &sigact, NULL);
 
-	// create server communication socket (no error check)
-	unlink(sock_a.sun_path);
-	bind(pfds[0].fd, (struct sockaddr*)(&sock_a), sizeof(sock_a));
+	/* create server communication socket (no error check) */
+	unlink(saddr.sun_path);
+	bind(pfds[0].fd, (struct sockaddr*)(&saddr), sizeof(saddr));
 	listen(pfds[0].fd, 2);
 
 #ifdef HAVE_SYS_INOTIFY_H
-	// initialize inode notification to watch changes in the config file
+	/* initialize inode notification to watch changes in the config file */
 	pfds[2].fd = inotify_init();
 	cmusfm_config_add_watch(pfds[2].fd);
 #else
@@ -310,7 +310,7 @@ void cmusfm_server_start(void) {
 	while (server_on) {
 
 		if (poll(pfds, 3, -1) == -1)
-			break;  // signal interruption
+			break;  /* signal interruption */
 
 		if (pfds[0].revents & POLLIN) {
 			pfds[1].fd = accept(pfds[0].fd, NULL, NULL);
@@ -325,8 +325,8 @@ void cmusfm_server_start(void) {
 
 #ifdef HAVE_SYS_INOTIFY_H
 		if (pfds[2].revents & POLLIN) {
-			// we're watching only one file, so the result if of no importance
-			// to us, simply read out the inotify file descriptor
+			/* We're watching only one file, so the result if of no importance
+			 * to us, simply read out the inotify file descriptor. */
 			read(pfds[2].fd, &inot_even, sizeof(inot_even));
 			debug("inotify event occurred: %x", inot_even.mask);
 			cmusfm_config_read(cmusfm_config_file, &config);
@@ -343,10 +343,10 @@ void cmusfm_server_start(void) {
 	cmusfm_notify_free();
 #endif
 	scrobbler_free(sbs);
-	unlink(sock_a.sun_path);
+	unlink(saddr.sun_path);
 }
 
-// Send track info to server instance.
+/* Send track info to server instance. */
 int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
 	char buffer[CMSOCKET_BUFFER_SIZE];
@@ -356,31 +356,29 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	char *title = (char *)(sock_data + 1);
 	char *location = (char *)(sock_data + 1);
 	struct format_match *match, *matches;
-	struct sockaddr_un sock_a;
+	struct sockaddr_un saddr;
 	int sock;
 
 	debug("sending track to cmusfm server");
 
 	memset(buffer, 0, sizeof(buffer));
 
-	// load data into the sock container
+	/* load data into the sock container */
 	sock_data->status = tinfo->status;
 	sock_data->tracknb = tinfo->tracknb;
-	// if no duration time assume 3 min
+	/* if no duration time assume 3 min */
 	sock_data->duration = tinfo->duration == 0 ? 180 : tinfo->duration;
 
-	// add Shoutcast (stream) flag
+	/* add Shoutcast (stream) flag */
 	if (tinfo->url != NULL)
 		sock_data->status |= CMSTATUS_SHOUTCASTMASK;
 
 	if ((tinfo->url != NULL && tinfo->artist == NULL && tinfo->title != NULL) ||
 			(tinfo->file != NULL && tinfo->artist == NULL && tinfo->title == NULL)) {
-		// NOTE: Automatic format detection mode.
-		// When title and artist was not specified but URL or file is available.
 		debug("regular expression matching mode");
 
 		if (tinfo->url != NULL) {
-			// URL: try to fetch artist and track tile form the 'title' field
+			/* URL: try to fetch artist and track tile form the 'title' field */
 
 			matches = get_regexp_format_matches(tinfo->title, config.format_shoutcast);
 			if (matches == NULL) {
@@ -389,7 +387,7 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 			}
 		}
 		else {
-			// FILE: try to fetch artist and track title from the 'file' field
+			/* FILE: try to fetch artist and track title from the 'file' field */
 
 			tinfo->file = basename(tinfo->file);
 			matches = get_regexp_format_matches(tinfo->file, config.format_localfile);
@@ -421,24 +419,24 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
 	}
 
-	// update track location (localfile or shoutcast)
+	/* update track location (localfile or shoutcast) */
 	location = &title[strlen(title) + 1];
 	if (tinfo->file != NULL)
 		strcpy(location, tinfo->file);
 	else if (tinfo->url != NULL)
 		strcpy(location, tinfo->url);
 
-	// calculate data offsets
+	/* calculate data offsets */
 	sock_data->alboff = album - artist;
 	sock_data->titoff = title - artist;
 	sock_data->locoff = location - artist;
 
-	// connect to the communication socket
-	memset(&sock_a, 0, sizeof(sock_a));
-	strcpy(sock_a.sun_path, cmusfm_socket_file);
-	sock_a.sun_family = AF_UNIX;
+	/* connect to the communication socket */
+	memset(&saddr, 0, sizeof(saddr));
+	strcpy(saddr.sun_path, cmusfm_socket_file);
+	saddr.sun_family = AF_UNIX;
 	sock = socket(PF_UNIX, SOCK_STREAM, 0);
-	if (connect(sock, (struct sockaddr *)(&sock_a), sizeof(sock_a)) == -1) {
+	if (connect(sock, (struct sockaddr *)(&saddr), sizeof(saddr)) == -1) {
 		close(sock);
 		return -1;
 	}
