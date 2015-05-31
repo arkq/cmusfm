@@ -36,23 +36,24 @@
 #include "cmusfm.h"
 
 
-// Return the pointer to the configuration value substring. This function
-// strips all white-spaces and optional quotation marks.
+/* Return the pointer to the configuration value substring. This function
+ * strips all white-spaces and optional quotation marks. */
 static char *get_config_value(char *str) {
 
 	char *end;
 
-	// seek to the beginning of a value
+	/* seek to the beginning of a value */
 	str = strchr(str, '=') + 1;
 
-	// trim leading spaces and optional quotation
+	/* trim leading spaces and optional quotation */
 	while (isspace(*str)) str++;
 	if (*str == '"') str++;
 
-	if (*str == 0) // edge case handling
+	/* edge case handling */
+	if (*str == 0)
 		return str;
 
-	// trim trailing spaces and optional quotation
+	/* trim trailing spaces and optional quotation */
 	end = str + strlen(str) - 1;
 	while (end > str && isspace(*end)) end--;
 	if (*end == '"') end--;
@@ -69,19 +70,19 @@ static int decode_config_bool(const char *value) {
 	return strcmp(value, "yes") == 0;
 }
 
-// Read cmusfm configuration from the file.
+/* Read cmusfm configuration from the file. */
 int cmusfm_config_read(const char *fname, struct cmusfm_config *conf) {
 
 	FILE *f;
 	char line[128];
 
-	// initialize configuration defaults
+	/* initialize configuration defaults */
 	memset(conf, 0, sizeof(*conf));
 	strcpy(conf->format_localfile, "^(?A.+) - (?T.+)\\.[^.]+$");
 	strcpy(conf->format_shoutcast, "^(?A.+) - (?T.+)$");
 #ifdef ENABLE_LIBNOTIFY
-	// set the MS Windows name convention as a default - compatible with most
-	// sailors from the pirate bay
+	/* set the MS Windows name convention as a default - compatible with most
+	 * sailors from the pirate bay */
 	strcpy(conf->format_coverfile, "^folder\\.jpg$");
 #endif
 	conf->nowplaying_localfile = 1;
@@ -120,16 +121,16 @@ int cmusfm_config_read(const char *fname, struct cmusfm_config *conf) {
 	return fclose(f);
 }
 
-// Write cmusfm configuration to the file.
+/* Write cmusfm configuration to the file. */
 int cmusfm_config_write(const char *fname, struct cmusfm_config *conf) {
 
 	FILE *f;
 
-	// create configuration file (truncate previous one)
+	/* create configuration file (truncate previous one) */
 	if ((f = fopen(fname, "w")) == NULL)
 		return -1;
 
-	// protect session key from exposure
+	/* protect session key from exposure */
 	chmod(fname, S_IWUSR | S_IRUSR);
 
 	fprintf(f, "# authentication\n");

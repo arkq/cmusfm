@@ -26,7 +26,7 @@
 #endif
 
 
-// Configuration file key definitions
+/* Configuration file key definitions */
 #define CMCONF_USER_NAME "user"
 #define CMCONF_SESSION_KEY "key"
 #define CMCONF_FORMAT_LOCALFILE "format-localfile"
@@ -43,7 +43,7 @@ struct cmusfm_config {
 	char user_name[64];
 	char session_key[16 * 2 + 1];
 
-	// regular expressions for name parsers
+	/* regular expressions for name parsers */
 	char format_localfile[64];
 	char format_shoutcast[64];
 #ifdef ENABLE_LIBNOTIFY

@@ -76,10 +76,10 @@ char *get_cmus_home_file(const char *file) {
 }
 
 #ifdef ENABLE_LIBNOTIFY
-// Return an album cover file based on the current location. Location should
-// be either a local file name or an URL. When cover file can not be found,
-// NULL is returned (URL case, or when coverfile ERE match failed). In case
-// of wild-card match, the first one is returned.
+/* Return an album cover file based on the current location. Location should
+ * be either a local file name or an URL. When cover file can not be found,
+ * NULL is returned (URL case, or when coverfile ERE match failed). In case
+ * of wild-card match, the first one is returned. */
 char *get_album_cover_file(const char *location, const char *format) {
 
 	static char fname[256];
@@ -92,9 +92,9 @@ char *get_album_cover_file(const char *location, const char *format) {
 	if (location == NULL)
 		return NULL;
 
-	// NOTE: We can support absolute paths only. The reason for this, is, that
-	//       cmus might report file name according to its current directory,
-	//       which is not known. Hence this obstruction.
+	/* NOTE: We can support absolute paths only. The reason for this, is, that
+	 *       cmus might report file name according to its current directory,
+	 *       which is not known. Hence this obstruction. */
 	if (location[0] != '/')
 		return NULL;
 
@@ -110,7 +110,7 @@ char *get_album_cover_file(const char *location, const char *format) {
 		return NULL;
 	}
 
-	// scan given directory for cover file name pattern
+	/* scan given directory for cover file name pattern */
 	while ((dp = readdir(dir)) != NULL) {
 		debug("cover lookup: %s", dp->d_name);
 		if (!regexec(&regex, dp->d_name, 0, NULL, 0)) {
@@ -130,15 +130,15 @@ char *get_album_cover_file(const char *location, const char *format) {
 }
 #endif
 
-// Get track information substrings from the given string. Matching is done
-// according to the provided format, which is a ERE pattern with customized
-// placeholders. Placeholder is defined as a marked subexpression with the
-// `?X` marker, where X can be one the following characters:
-//   A - artist, B - album, T - title, N - track number
-//   e.g.: ^(?A.+) - (?N[:digits:]+)\. (?T.+)$
-// In order to get a single match structure, one should use `get_regexp_match`
-// function. When matches are not longer needed, is should be freed by the
-// standard `free` function. When something goes wrong, NULL is returned.
+/* Get track information substrings from the given string. Matching is done
+ * according to the provided format, which is a ERE pattern with customized
+ * placeholders. Placeholder is defined as a marked subexpression with the
+ * `?X` marker, where X can be one the following characters:
+ *   A - artist, B - album, T - title, N - track number
+ *   e.g.: ^(?A.+) - (?N[:digits:]+)\. (?T.+)$
+ * In order to get a single match structure, one should use `get_regexp_match`
+ * function. When matches are not longer needed, is should be freed by the
+ * standard `free` function. When something goes wrong, NULL is returned. */
 struct format_match *get_regexp_format_matches(const char *str, const char *format) {
 #define MATCHES_SIZE FORMAT_MATCH_TYPE_COUNT + 1
 
@@ -151,8 +151,8 @@ struct format_match *get_regexp_format_matches(const char *str, const char *form
 
 	debug("matching: %s: %s", format, str);
 
-	// allocate memory for up to FORMAT_MATCH_TYPE_COUNT matches
-	// with one extra always empty terminating structure
+	/* allocate memory for up to FORMAT_MATCH_TYPE_COUNT matches
+	 * with one extra always empty terminating structure */
 	matches = (struct format_match *)calloc(MATCHES_SIZE, sizeof(*matches));
 
 	regexp = strdup(format);
@@ -185,8 +185,10 @@ struct format_match *get_regexp_format_matches(const char *str, const char *form
 	return matches;
 }
 
-// Return pointer to the single format match structure with given match type.
-struct format_match *get_regexp_match(struct format_match *matches, enum format_match_type type) {
+/* Return pointer to the single format match structure with given
+ * match type. */
+struct format_match *get_regexp_match(struct format_match *matches,
+		enum format_match_type type) {
 	while (matches->type) {
 		if (matches->type == type)
 			break;

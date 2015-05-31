@@ -31,10 +31,10 @@
 #define SCROBBLER_USERAUTH_URL "http://www.last.fm/api/auth/"
 
 typedef struct scrobbler_session_tag {
-	uint8_t api_key[16];     //128-bit API key
-	uint8_t secret[16];      //128-bit secter
+	uint8_t api_key[16];     /* 128-bit API key */
+	uint8_t secret[16];      /* 128-bit secret */
 
-	uint8_t session_key[16]; //128-bit session key (authentication)
+	uint8_t session_key[16]; /* 128-bit session key */
 	char user_name[64];
 
 	int error_code;
@@ -46,12 +46,12 @@ typedef struct scrobbler_trackinfo_tag {
 	time_t timestamp;
 } scrobbler_trackinfo_t;
 
-// ----- scrobbler_* error types definitions -----
-#define SCROBBERR_CURLINIT 1 //curl initialization error
-#define SCROBBERR_CURLPERF 2 //curl perform error - network issue
-#define SCROBBERR_SBERROR  3 //scrobbler API error
-#define SCROBBERR_CALLBACK 4 //callback error (authentication)
-#define SCROBBERR_TRACKINF 5 //missing required field(s) in trackinfo structure
+/* ----- scrobbler_* error definitions ----- */
+#define SCROBBERR_CURLINIT 1 /* curl initialization error */
+#define SCROBBERR_CURLPERF 2 /* curl perform error - network issue */
+#define SCROBBERR_SBERROR  3 /* scrobbler API error */
+#define SCROBBERR_CALLBACK 4 /* callback error (authentication) */
+#define SCROBBERR_TRACKINF 5 /* missing required field in trackinfo */
 
 scrobbler_session_t *scrobbler_initialize(uint8_t api_key[16],
 		uint8_t secret[16]);

@@ -25,28 +25,28 @@
 #include <libnotify/notify.h>
 
 
-// global notification handler
+/* global notification handler */
 static NotifyNotification *cmus_notify;
 
 
-// Show track information via the notification system.
+/* Show track information via the notification system. */
 void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon) {
 
 	char *body;
 	size_t art_len, alb_len;
 
-	if(cmus_notify) {
-		// forcefully close previous notification
+	if (cmus_notify) {
+		/* forcefully close previous notification */
 		notify_notification_close(cmus_notify, NULL);
 		g_object_unref(G_OBJECT(cmus_notify));
 	}
 
-	// concatenate artist and album (when applicable)
+	/* concatenate artist and album (when applicable) */
 	art_len = strlen(sb_tinf->artist);
 	alb_len = strlen(sb_tinf->album);
-	body = (char*)malloc(art_len + alb_len + sizeof(" ()") + 1);
+	body = (char *)malloc(art_len + alb_len + sizeof(" ()") + 1);
 	strcpy(body, sb_tinf->artist);
-	if(alb_len > 0)
+	if (alb_len > 0)
 		sprintf(&body[art_len], " (%s)", sb_tinf->album);
 
 	cmus_notify = notify_notification_new(sb_tinf->track, body, icon);
@@ -54,15 +54,15 @@ void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon) 
 	free(body);
 }
 
-// Initialize notification system.
+/* Initialize notification system. */
 void cmusfm_notify_initialize() {
 	cmus_notify = NULL;
 	notify_init("cmusfm");
 }
 
-// Free notification system resources.
+/* Free notification system resources. */
 void cmusfm_notify_free() {
-	if(cmus_notify)
+	if (cmus_notify)
 		g_object_unref(G_OBJECT(cmus_notify));
 	notify_uninit();
 }
