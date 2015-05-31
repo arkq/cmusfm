@@ -1,6 +1,6 @@
 /*
  * cmusfm - libscrobbler2.c
- * Copyright (c) 2011-2014 Arkadiusz Bokowy
+ * Copyright (c) 2011-2015 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -41,7 +41,7 @@ static unsigned char *hex2mem(unsigned char *mem, const char *src, size_t n);
 /* used as a buffer for GET/POST server response */
 struct sb_response_data {
 	char *data;
-	int len;
+	int size;
 };
 
 /* used for quick URL and signature creation process */
@@ -56,19 +56,26 @@ struct sb_getpost_data {
 static size_t sb_curl_write_callback(char *ptr, size_t size, size_t nmemb,
 		void *data) {
 
-	struct sb_response_data *resp = (struct sb_response_data*)data;
-	int len = size * nmemb;
+	struct sb_response_data *rd = (struct sb_response_data *)data;
+	size *= nmemb;
 
-	debug("read: len: %d, body: %s", len, ptr);
-	resp->data = realloc(resp->data, resp->len + len + 1);
-	memcpy(&resp->data[resp->len], ptr, len);
-	resp->len += len;
-	resp->data[resp->len] = 0;
-	return len;
+	debug("read: size: %d, body: %s", size, ptr);
+
+	/* passing a zero bytes data to this callback is not en error,
+	 * however memory allocation fail is */
+	if (!size || (rd->data = realloc(rd->data, rd->size + size + 1)) == NULL)
+		return 0;
+
+	memcpy(&rd->data[rd->size], ptr, size);
+	rd->size += size;
+	rd->data[rd->size] = '\0';
+
+	return size;
 }
 
 /* Initialize CURL handler for internal usage. */
-CURL *sb_curl_init(CURLoption method, struct sb_response_data *response) {
+static CURL *sb_curl_init(CURLoption method, struct sb_response_data *response) {
+
 	CURL *curl;
 
 	if ((curl = curl_easy_init()) == NULL)
@@ -90,13 +97,13 @@ CURL *sb_curl_init(CURLoption method, struct sb_response_data *response) {
 }
 
 /* Cleanup CURL handler and free allocated response buffer. */
-void sb_curl_cleanup(CURL *curl, struct sb_response_data *response) {
+static void sb_curl_cleanup(CURL *curl, struct sb_response_data *response) {
 	curl_easy_cleanup(curl);
 	free(response->data);
 }
 
 /* Check scrobble API response status (and curl itself). */
-int sb_check_response(struct sb_response_data *response,
+static int sb_check_response(struct sb_response_data *response,
 		int curl_status, scrobbler_session_t *sbs) {
 
 	debug("check: status: %d, body: %s", curl_status, response->data);
@@ -123,7 +130,7 @@ int sb_check_response(struct sb_response_data *response,
 }
 
 /* Generate MD5 scrobbler API method signature. */
-void sb_generate_method_signature(struct sb_getpost_data *sb_data,
+static void sb_generate_method_signature(struct sb_getpost_data *sb_data,
 		int len, uint8_t secret[16], uint8_t sign[MD5_DIGEST_LENGTH]) {
 
 	char secret_hex[16 * 2 + 1];
@@ -148,7 +155,7 @@ void sb_generate_method_signature(struct sb_getpost_data *sb_data,
 }
 
 /* Make curl GET/POST string (escape data). */
-char *sb_make_curl_getpost_string(CURL *curl, char *str_buffer,
+static char *sb_make_curl_getpost_string(CURL *curl, char *str_buffer,
 		struct sb_getpost_data *sb_data, int len) {
 
 	char *escaped_data, format[8];
@@ -244,7 +251,7 @@ int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt) {
 
 /* Notify Last.fm that a user has started listening to a track. This
  * is an engine function (without required argument check). */
-int sb_update_now_playing(scrobbler_session_t *sbs,
+static int sb_update_now_playing(scrobbler_session_t *sbs,
 		scrobbler_trackinfo_t *sbt) {
 
 	CURL *curl;
@@ -400,7 +407,7 @@ int scrobbler_authentication(scrobbler_session_t *sbs,
 	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* reinitialize response buffer */
-	response.len = 0;
+	response.size = 0;
 
 	/* make auth.getSession GET request */
 	strcpy(get_url, SCROBBLER_URL "?");
