@@ -34,8 +34,8 @@
 #include "debug.h"
 
 
-char *mem2hex(const unsigned char *mem, int len, char *str);
-unsigned char *hex2mem(const char *str, int len, unsigned char *mem);
+static char *mem2hex(char *dest, const unsigned char *mem, size_t n);
+static unsigned char *hex2mem(unsigned char *mem, const char *src, size_t n);
 
 
 /* used as a buffer for GET/POST server response */
@@ -130,7 +130,7 @@ void sb_generate_method_signature(struct sb_getpost_data *sb_data,
 	char tmp_str[2048], format[8];
 	int x, offset;
 
-	mem2hex(secret, 16, secret_hex);
+	mem2hex(secret_hex, secret, 16);
 
 	for (x = offset = 0; x < len; x++) {
 
@@ -223,12 +223,12 @@ int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt) {
 	if ((curl = sb_curl_init(CURLOPT_POST, &response)) == NULL)
 		return SCROBBERR_CURLINIT;
 
-	mem2hex(sbs->api_key, sizeof(sbs->api_key), api_key_hex);
-	mem2hex(sbs->session_key, sizeof(sbs->session_key), session_key_hex);
+	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
+	mem2hex(session_key_hex, sbs->session_key, sizeof(sbs->session_key));
 
 	/* make signature for track.scrobble API call */
 	sb_generate_method_signature(sb_data, 11, sbs->secret, sign);
-	mem2hex(sign, sizeof(sign), sign_hex);
+	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* make track.scrobble POST request */
 	sb_make_curl_getpost_string(curl, post_data, sb_data, 12);
@@ -280,12 +280,12 @@ int sb_update_now_playing(scrobbler_session_t *sbs,
 	if ((curl = sb_curl_init(CURLOPT_POST, &response)) == NULL)
 		return SCROBBERR_CURLINIT;
 
-	mem2hex(sbs->api_key, sizeof(sbs->api_key), api_key_hex);
-	mem2hex(sbs->session_key, sizeof(sbs->session_key), session_key_hex);
+	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
+	mem2hex(session_key_hex, sbs->session_key, sizeof(sbs->session_key));
 
 	/* make signature for track.updateNowPlaying API call */
 	sb_generate_method_signature(sb_data, 10, sbs->secret, sign);
-	mem2hex(sign, sizeof(sign), sign_hex);
+	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* make track.updateNowPlaying POST request */
 	sb_make_curl_getpost_string(curl, post_data, sb_data, 11);
@@ -330,12 +330,12 @@ int scrobbler_test_session_key(scrobbler_session_t *sbs) {
 /* Return the session key in the string hex dump. The memory block pointed by
  * the str has to be big enough to contain sizeof(session_key) * 2 + 1. */
 char *scrobbler_get_session_key_str(scrobbler_session_t *sbs, char *str) {
-	return mem2hex(sbs->session_key, sizeof(sbs->session_key), str);
+	return mem2hex(str, sbs->session_key, sizeof(sbs->session_key));
 }
 
 /* Set session key by parsing the hex dump of this key. */
 void scrobbler_set_session_key_str(scrobbler_session_t *sbs, const char *str) {
-	hex2mem(str, sizeof(sbs->session_key), sbs->session_key);
+	hex2mem(sbs->session_key, str, sizeof(sbs->session_key) * 2);
 }
 
 /* Perform scrobbler service authentication process. */
@@ -366,11 +366,11 @@ int scrobbler_authentication(scrobbler_session_t *sbs,
 	if ((curl = sb_curl_init(CURLOPT_HTTPGET, &response)) == NULL)
 		return SCROBBERR_CURLINIT;
 
-	mem2hex(sbs->api_key, sizeof(sbs->api_key), api_key_hex);
+	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
 
 	/* make signature for auth.getToken API call */
 	sb_generate_method_signature(sb_data_token, 2, sbs->secret, sign);
-	mem2hex(sign, sizeof(sign), sign_hex);
+	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* make auth.getToken GET request */
 	strcpy(get_url, SCROBBLER_URL "?");
@@ -397,7 +397,7 @@ int scrobbler_authentication(scrobbler_session_t *sbs,
 
 	/* make signature for auth.getSession API call */
 	sb_generate_method_signature(sb_data_session, 3, sbs->secret, sign);
-	mem2hex(sign, sizeof(sign), sign_hex);
+	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* reinitialize response buffer */
 	response.len = 0;
@@ -421,7 +421,7 @@ int scrobbler_authentication(scrobbler_session_t *sbs,
 	if ((ptr = strchr(sbs->user_name, '<')) != NULL)
 		*ptr = 0;
 	memcpy(get_url, strstr(response.data, "<key>") + 5, 32);
-	hex2mem(get_url, sizeof(sbs->session_key), sbs->session_key);
+	hex2mem(sbs->session_key, get_url, sizeof(sbs->session_key) * 2);
 
 	sb_curl_cleanup(curl, &response);
 	return 0;
@@ -455,33 +455,42 @@ void scrobbler_free(scrobbler_session_t *sbs) {
 	free(sbs);
 }
 
-/* Dump memory into hexadecimal string format. Note that *str has to be
- * big enough to contain 2*len+1. */
-char *mem2hex(const unsigned char *mem, int len, char *str)
-{
-	char hexchars[] = "0123456789abcdef", *ptr;
-	int x;
+/* Dump memory pointed by the mem into the dest string in the hexadecimal
+ * format. Note, that the dest has to be big enough to contain 2 * n with
+ * termination NULL character. */
+char *mem2hex(char *dest, const unsigned char *mem, size_t n) {
 
-	for(x = 0, ptr = str; x < len; x++){
-		*(ptr++) = hexchars[(mem[x] >> 4) & 0x0f];
-		*(ptr++) = hexchars[mem[x] & 0x0f];}
-	*ptr = 0;
+	const char hexchars[] = "0123456789abcdef";
+	char *ptr = dest;
+	int i;
 
-	return str;
+	for (i = 0; i < n; i++) {
+		*(ptr++) = hexchars[(mem[i] >> 4) & 0x0f];
+		*(ptr++) = hexchars[mem[i] & 0x0f];
+	}
+	*ptr = '\0';
+
+	return dest;
 }
 
-/* Opposite to mem2hex. Len is the number of bytes in hex representation,
- * so strlen(str) should be 2*len. */
-unsigned char *hex2mem(const char *str, int len, unsigned char *mem)
-{
-	int x;
+/* Opposite to the mem2hex. N is the number of characters which should be
+ * converted from the hexadecimal representation. Address pointed by the
+ * mem should be big enough to contain n / 2 bytes. */
+unsigned char *hex2mem(unsigned char *mem, const char *src, size_t n) {
 
-	for(x = 0; x < len; x++) {
-		if(isdigit(str[x*2])) mem[x] = (str[x*2] - '0') << 4;
-		else mem[x] = (tolower(str[x*2]) - 'a' + 10) << 4;
+	int i;
 
-		if(isdigit(str[x*2 + 1])) mem[x] += str[x*2 + 1] - '0';
-		else mem[x] += tolower(str[x*2 + 1]) - 'a' + 10;
+	n /= 2;
+	for (i = 0; i < n; i++) {
+		if (isdigit(src[i * 2]))
+			mem[i] = (src[i * 2] - '0') << 4;
+		else
+			mem[i] = (tolower(src[i * 2]) - 'a' + 10) << 4;
+
+		if (isdigit(src[i * 2 + 1]))
+			mem[i] += src[i * 2 + 1] - '0';
+		else
+			mem[i] += tolower(src[i * 2 + 1]) - 'a' + 10;
 	}
 
 	return mem;
