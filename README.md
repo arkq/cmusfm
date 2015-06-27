@@ -1,4 +1,4 @@
-cmusfm
+cmusfm [![Build Status](https://travis-ci.org/Arkq/cmusfm.svg?branch=master)](https://travis-ci.org/Arkq/cmusfm)
 ======
 
 [Last.fm](http://www.last.fm/) standalone scrobbler for the [cmus](https://cmus.github.io/) music
