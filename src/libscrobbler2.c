@@ -59,7 +59,7 @@ static size_t sb_curl_write_callback(char *ptr, size_t size, size_t nmemb,
 	struct sb_response_data *rd = (struct sb_response_data *)data;
 	size *= nmemb;
 
-	debug("read: size: %d, body: %s", size, ptr);
+	debug("read: size: %zu, body: %s", size, ptr);
 
 	/* passing a zero bytes data to this callback is not en error,
 	 * however memory allocation fail is */
