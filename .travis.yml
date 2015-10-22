@@ -1,7 +1,12 @@
+sudo: false
+
 language: c
 
-install:
-  - sudo apt-get install libcurl4-openssl-dev libnotify-dev
+addons:
+  apt:
+    packages:
+      - libcurl4-openssl-dev
+      - libnotify-dev
 
 before_script:
   - autoreconf --install && mkdir build && cd build

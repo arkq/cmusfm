@@ -31,6 +31,7 @@
 /depcomp
 /install-sh
 /missing
+/test-driver
 Makefile.in
 config.h.in
 *~
