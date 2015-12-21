@@ -75,6 +75,14 @@ char *get_cmus_home_file(const char *file) {
 	return fullpath;
 }
 
+/* Simple and fast "hashing" function. */
+int make_data_hash(const unsigned char *data, int len) {
+	int x, hash;
+	for (x = hash = 0; x < len; x++)
+		hash += data[x] * (x + 1);
+	return hash;
+}
+
 #if ENABLE_LIBNOTIFY
 /* Return an album cover file based on the current location. Location should
  * be either a local file name or an URL. When cover file can not be found,

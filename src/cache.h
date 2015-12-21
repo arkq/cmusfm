@@ -1,6 +1,6 @@
 /*
  * cmusfm - cache.h
- * Copyright (c) 2014 Arkadiusz Bokowy
+ * Copyright (c) 2014-2015 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -25,14 +25,27 @@
 #include "libscrobbler2.h"
 
 
-#define CMUSFM_CACHE_SIGNATURE 0x6643
+/* "Cr" string (big-endian) at the beginning of the record */
+#define CMUSFM_CACHE_SIGNATURE 0x4372
 
 /* cache record header structure */
 struct __attribute__((__packed__)) cmusfm_cache_record {
-	uint32_t signature;
-	uint32_t timestamp, track_number, duration;
-	uint16_t artist_len, album_len, album_artist_len;
-	uint16_t track_len, mbid_len;
+
+	/* record header */
+	uint16_t signature;
+	uint8_t checksum1;
+	uint8_t checksum2;
+
+	uint32_t timestamp;
+	uint16_t track_number;
+	uint16_t duration;
+
+	uint16_t len_artist;
+	uint16_t len_album;
+	uint16_t len_track;
+	uint16_t len_album_artist;
+	uint16_t len_mbid;
+
 	/* NULL-terminated strings
 	char artist[];
 	char album[];
@@ -40,11 +53,12 @@ struct __attribute__((__packed__)) cmusfm_cache_record {
 	char track[];
 	char mbid[];
 	*/
+
 };
 
 
-char *get_cmusfm_cache_file(void);
 void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf);
 void cmusfm_cache_submit(scrobbler_session_t *sbs);
+char *get_cmusfm_cache_file(void);
 
 #endif

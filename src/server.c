@@ -77,14 +77,6 @@ static void set_trackinfo(scrobbler_trackinfo_t *sbt, struct sock_data_tag *dt) 
 	sbt->track = get_sock_data_track(dt);
 }
 
-/* Simple and fast "hashing" function. */
-static int make_data_hash(const unsigned char *data, int len) {
-	int x, hash;
-	for (x = hash = 0; x < len; x++)
-		hash += data[x] * (x + 1);
-	return hash;
-}
-
 /* Process real server task - Last.fm submission. */
 static void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs) {
 

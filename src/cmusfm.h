@@ -75,6 +75,7 @@ struct format_match {
 
 char *get_cmus_home_dir(void);
 char *get_cmus_home_file(const char *file);
+int make_data_hash(const unsigned char *data, int len);
 #if ENABLE_LIBNOTIFY
 char *get_album_cover_file(const char *location, const char *format);
 #endif
