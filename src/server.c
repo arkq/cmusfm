@@ -390,7 +390,7 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
 	/* load data into the sock container */
 	sock_data->status = tinfo->status;
-	sock_data->tracknb = tinfo->tracknb;
+	sock_data->tracknb = tinfo->track_number;
 	/* if no duration time assume 3 min */
 	sock_data->duration = tinfo->duration == 0 ? 180 : tinfo->duration;
 

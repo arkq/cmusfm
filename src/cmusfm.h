@@ -51,10 +51,11 @@ enum cmstatus {
 	CMSTATUS_STOPPED
 };
 
+/* structure for data obtained from cmus */
 struct cmtrack_info {
 	enum cmstatus status;
 	char *file, *url, *artist, *album, *title;
-	int tracknb, duration;
+	int track_number, duration;
 };
 
 

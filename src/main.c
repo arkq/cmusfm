@@ -82,7 +82,7 @@ static struct cmtrack_info *get_track_info(int argc, char *argv[]) {
 		else if (strcmp(argv[i], "album") == 0)
 			tinfo->album = argv[i + 1];
 		else if (strcmp(argv[i], "tracknumber") == 0)
-			tinfo->tracknb = atoi(argv[i + 1]);
+			tinfo->track_number = atoi(argv[i + 1]);
 		else if (strcmp(argv[i], "title") == 0)
 			tinfo->title = argv[i + 1];
 		else if (strcmp(argv[i], "duration") == 0)
