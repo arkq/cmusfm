@@ -27,16 +27,35 @@
 /* communication socket buffer size */
 #define CMSOCKET_BUFFER_SIZE 1024
 
+/* shoutcast/stream flag for the status field */
 #define CMSTATUS_SHOUTCASTMASK 0xF0
-struct sock_data_tag {
+
+/* message queue record structure */
+struct cmusfm_data_record {
+
+	/* record header */
+	uint8_t checksum1;
+	uint8_t checksum2;
+
+	/* NOTE: This field has to be defined before any other fields,
+	 *       because the hashing logic relies on this assumption. */
 	enum cmstatus status;
-	int tracknb, duration;
-	int alboff, titoff, locoff;
-/* char artist[]; */
-/* char album[]; */
-/* char title[]; */
-/* char location[]; */
-}__attribute__ ((packed));
+
+	uint16_t track_number;
+	uint16_t duration;
+
+	uint16_t off_album;
+	uint16_t off_title;
+	uint16_t off_location;
+
+	/* NULL-terminated strings
+	char artist[];
+	char album[];
+	char title[];
+	char location[];
+	*/
+
+};
 
 
 char *get_cmusfm_socket_file(void);

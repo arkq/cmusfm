@@ -35,6 +35,12 @@ void cmusfm_notify_show(const scrobbler_trackinfo_t *sbt, const char *icon) {
 	cmusfm_notify_show_count++;
 }
 
+/* helper function for updating data record checksum fields */
+void cmusfm_server_update_record_checksum(struct cmusfm_data_record *record) {
+	record->checksum1 = make_record_checksum1(record);
+	record->checksum2 = make_record_checksum2(record);
+}
+
 /* other (irrelevant) functions used by the server code */
 void cmusfm_cache_update(const scrobbler_trackinfo_t *sbt) {}
 void cmusfm_cache_submit(scrobbler_session_t *sbs) {}
