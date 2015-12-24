@@ -184,7 +184,6 @@ int main(int argc, char *argv[]) {
 	/* setup global variables - file locations */
 	cmusfm_cache_file = get_cmusfm_cache_file();
 	cmusfm_config_file = get_cmusfm_config_file();
-	cmusfm_socket_file = get_cmusfm_socket_file();
 
 	if (argc == 2 && strcmp(argv[1], "init") == 0) {
 		cmusfm_initialization();

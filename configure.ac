@@ -1,7 +1,7 @@
 # cmusfm - configure.ac
-# Copyright (c) 2014 Arkadiusz Bokowy
+# Copyright (c) 2014-2015 Arkadiusz Bokowy
 
-AC_INIT([cmusfm], [0.2.0], [arkadiusz.bokowy@gmail.com])
+AC_INIT([cmusfm], [0.2.5], [arkadiusz.bokowy@gmail.com])
 AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
 
@@ -23,6 +23,14 @@ AC_CHECK_HEADERS(
 AC_CHECK_LIB(
 	[crypto], [MD5],
 	[], [AC_MSG_ERROR([crypto library not found])]
+)
+AC_CHECK_HEADERS(
+	[mqueue.h],
+	[], [AC_MSG_ERROR([mqueue.h header not found])]
+)
+AC_CHECK_LIB(
+	[rt], [mq_open],
+	[], [AC_MSG_ERROR([rt library not found])]
 )
 AC_CHECK_HEADERS(
 	[poll.h],
