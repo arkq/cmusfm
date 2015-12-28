@@ -3,7 +3,7 @@
 
 AC_INIT([cmusfm], [0.2.0], [arkadiusz.bokowy@gmail.com])
 AC_CONFIG_HEADERS([config.h])
-AM_INIT_AUTOMAKE([foreign -Wall -Werror])
+AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
 
 AC_PROG_CC
 AM_PROG_CC_C_O
@@ -54,5 +54,5 @@ AS_IF([test "x$enable_libnotify" = "xyes"], [
 	)
 ])
 
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile test/Makefile])
 AC_OUTPUT
