@@ -109,7 +109,7 @@ static void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs) {
 			sock_data->duration);
 	debug("location: %s", get_sock_data_location(sock_data));
 
-#if DEBUG
+#if DEBUG && !defined(DEBUG_SKIP_HICCUP)
 	/* simulate server "hiccup" (e.g. internet connection issue) */
 	debug("server hiccup test (5s)");
 	sleep(5);
@@ -133,14 +133,25 @@ static void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs) {
 			scrobbler_fail_time = time(NULL);
 	}
 
-	if (new_hash != prev_hash) {  /* maybe it's time to submit :) */
+	/* User is playing a new track or the status has changed for the previous
+	 * one. In both cases we should check if the track should be submitted. */
+	if (new_hash != prev_hash) {
 		prev_hash = new_hash;
 action_submit:
 		playtime += time(NULL) - unpaused;
-		if (started != 0 && (playtime * 100 / fulltime > 50 || playtime > 240)) {
+
+		/* Track should be submitted if it is longer than 30 seconds and it has
+		 * been played for at least half its duration (play time is greater than
+		 * 15 seconds or 50% of the track duration respectively). Also the track
+		 * should be submitted if the play time is greater than 4 minutes. */
+		if (started != 0 && (playtime > fulltime - playtime || playtime > 240)) {
+
 			/* playing duration is OK so submit track */
 			set_trackinfo(&sb_tinf, (struct sock_data_tag*)saved_data);
 			sb_tinf.timestamp = started;
+
+			if (sb_tinf.duration <= 30)
+				goto action_submit_skip;
 
 			if ((saved_is_radio && !config.submit_shoutcast) ||
 					(!saved_is_radio && !config.submit_localfile)) {
