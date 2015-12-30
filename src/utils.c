@@ -18,7 +18,7 @@
  * see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef HAVE_CONFIG_H
+#if HAVE_CONFIG_H
 #include "../config.h"
 #endif
 
@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef ENABLE_LIBNOTIFY
+#if ENABLE_LIBNOTIFY
 #include <dirent.h>
 #include <libgen.h>
 #endif
@@ -75,7 +75,7 @@ char *get_cmus_home_file(const char *file) {
 	return fullpath;
 }
 
-#ifdef ENABLE_LIBNOTIFY
+#if ENABLE_LIBNOTIFY
 /* Return an album cover file based on the current location. Location should
  * be either a local file name or an URL. When cover file can not be found,
  * NULL is returned (URL case, or when coverfile ERE match failed). In case

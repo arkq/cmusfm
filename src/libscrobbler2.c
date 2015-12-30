@@ -18,7 +18,7 @@
  * see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef HAVE_CONFIG_H
+#if HAVE_CONFIG_H
 #include "../config.h"
 #endif
 
@@ -81,7 +81,7 @@ static CURL *sb_curl_init(CURLoption method, struct sb_response_data *response) 
 	if ((curl = curl_easy_init()) == NULL)
 		return NULL;
 
-#ifdef CURLOPT_PROTOCOLS
+#if CURLOPT_PROTOCOLS
 	curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
 #endif
 	curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);

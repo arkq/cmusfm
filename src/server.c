@@ -18,7 +18,7 @@
  * see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef HAVE_CONFIG_H
+#if HAVE_CONFIG_H
 #include "../config.h"
 #endif
 
@@ -34,7 +34,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#ifdef HAVE_SYS_INOTIFY_H
+#if HAVE_SYS_INOTIFY_H
 #include <sys/inotify.h>
 #endif
 
@@ -42,7 +42,7 @@
 #include "cmusfm.h"
 #include "config.h"
 #include "debug.h"
-#ifdef ENABLE_LIBNOTIFY
+#if ENABLE_LIBNOTIFY
 #include "notify.h"
 #endif
 
@@ -117,7 +117,7 @@ static void cmusfm_server_process_data(int fd, scrobbler_session_t *sbs) {
 			sock_data->duration);
 	debug("location: %s", get_sock_data_location(sock_data));
 
-#ifdef DEBUG
+#if DEBUG
 	/* simulate server "hiccup" (e.g. internet connection issue) */
 	debug("server hiccup test (5s)");
 	sleep(5);
@@ -190,7 +190,7 @@ action_submit_skip:
 action_nowplaying:
 				set_trackinfo(&sb_tinf, sock_data);
 
-#ifdef ENABLE_LIBNOTIFY
+#if ENABLE_LIBNOTIFY
 				if (config.notification)
 					cmusfm_notify_show(&sb_tinf, get_album_cover_file(
 								get_sock_data_location(sock_data), config.format_coverfile));
@@ -281,7 +281,7 @@ int cmusfm_server_start(void) {
 	struct sigaction sigact;
 	struct sockaddr_un saddr;
 	struct pollfd pfds[3];
-#ifdef HAVE_SYS_INOTIFY_H
+#if HAVE_SYS_INOTIFY_H
 	struct inotify_event inot_even;
 #endif
 	int retval;
@@ -305,7 +305,7 @@ int cmusfm_server_start(void) {
 	sbs = scrobbler_initialize(SC_api_key, SC_secret);
 	scrobbler_set_session_key_str(sbs, config.session_key);
 
-#ifdef ENABLE_LIBNOTIFY
+#if ENABLE_LIBNOTIFY
 	/* initialize notification library */
 	cmusfm_notify_initialize();
 #endif
@@ -323,7 +323,7 @@ int cmusfm_server_start(void) {
 			listen(pfds[0].fd, 2) == -1)
 		goto return_failure;
 
-#ifdef HAVE_SYS_INOTIFY_H
+#if HAVE_SYS_INOTIFY_H
 	/* initialize inode notification to watch changes in the config file */
 	pfds[2].fd = inotify_init();
 	cmusfm_config_add_watch(pfds[2].fd);
@@ -346,7 +346,7 @@ int cmusfm_server_start(void) {
 			pfds[1].fd = -1;
 		}
 
-#ifdef HAVE_SYS_INOTIFY_H
+#if HAVE_SYS_INOTIFY_H
 		if (pfds[2].revents & POLLIN) {
 			/* We're watching only one file, so the result if of no importance
 			 * to us, simply read out the inotify file descriptor. */
@@ -367,10 +367,10 @@ return_failure:
 return_success:
 
 	close(pfds[0].fd);
-#ifdef HAVE_SYS_INOTIFY_H
+#if HAVE_SYS_INOTIFY_H
 	close(pfds[2].fd);
 #endif
-#ifdef ENABLE_LIBNOTIFY
+#if ENABLE_LIBNOTIFY
 	cmusfm_notify_free();
 #endif
 	scrobbler_free(sbs);

@@ -21,7 +21,7 @@
 #ifndef __CMUSFM_CONFIG_H
 #define __CMUSFM_CONFIG_H
 
-#ifdef HAVE_CONFIG_H
+#if HAVE_CONFIG_H
 #include "../config.h"
 #endif
 
@@ -46,7 +46,7 @@ struct cmusfm_config {
 	/* regular expressions for name parsers */
 	char format_localfile[64];
 	char format_shoutcast[64];
-#ifdef ENABLE_LIBNOTIFY
+#if ENABLE_LIBNOTIFY
 	char format_coverfile[64];
 #endif
 
@@ -54,7 +54,7 @@ struct cmusfm_config {
 	unsigned int nowplaying_shoutcast : 1;
 	unsigned int submit_localfile : 1;
 	unsigned int submit_shoutcast : 1;
-#ifdef ENABLE_LIBNOTIFY
+#if ENABLE_LIBNOTIFY
 	unsigned int notification : 1;
 #endif
 };
