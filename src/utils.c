@@ -87,7 +87,7 @@ int make_data_hash(const unsigned char *data, int len) {
 /* Return an album cover file based on the current location. Location should
  * be either a local file name or an URL. When cover file can not be found,
  * NULL is returned (URL case, or when coverfile ERE match failed). In case
- * of wild-card match, the first one is returned. */
+ * of wild-card match, the first match is returned. */
 char *get_album_cover_file(const char *location, const char *format) {
 
 	static char fname[256];
@@ -96,6 +96,8 @@ char *get_album_cover_file(const char *location, const char *format) {
 	struct dirent *dp;
 	regex_t regex;
 	char *tmp;
+
+	debug("get cover (case-insensitive): %s", format);
 
 	if (location == NULL)
 		return NULL;
@@ -139,14 +141,14 @@ char *get_album_cover_file(const char *location, const char *format) {
 #endif
 
 /* Get track information substrings from the given string. Matching is done
- * according to the provided format, which is a ERE pattern with customized
- * placeholders. Placeholder is defined as a marked subexpression with the
- * `?X` marker, where X can be one the following characters:
+ * using the provided format string, which should be an ERE-based pattern with
+ * customized placeholders. A placeholder is defined as a marked subexpression
+ * with the ?X marker, where the X can be one the following characters:
  *   A - artist, B - album, T - title, N - track number
  *   e.g.: ^(?A.+) - (?N[:digits:]+)\. (?T.+)$
- * In order to get a single match structure, one should use `get_regexp_match`
- * function. When matches are not longer needed, is should be freed by the
- * standard `free` function. When something goes wrong, NULL is returned. */
+ * In order to get a single match structure, one should use get_regexp_match()
+ * function. When something goes wrong, NULL is returned. Memory for matches
+ * is obtained with malloc(), and can be freed with free() function. */
 struct format_match *get_regexp_format_matches(const char *str, const char *format) {
 #define MATCHES_SIZE FORMAT_MATCH_TYPE_COUNT + 1
 
@@ -193,7 +195,7 @@ struct format_match *get_regexp_format_matches(const char *str, const char *form
 	return matches;
 }
 
-/* Return pointer to the single format match structure with given
+/* Return a pointer to the single format match structure with the given
  * match type. */
 struct format_match *get_regexp_match(struct format_match *matches,
 		enum format_match_type type) {
