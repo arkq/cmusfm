@@ -25,13 +25,13 @@ int main(void) {
 
 	cmusfm_server_process_data(NULL, track);
 	assert(scrobbler_update_now_playing_count == 1);
+	assert(strcmp(scrobbler_update_now_playing_sbt.artist, "The Beatles") == 0);
+	assert(strcmp(scrobbler_update_now_playing_sbt.track, "Yellow Submarine") == 0);
 
 	config.nowplaying_localfile = 0;
 
 	cmusfm_server_process_data(NULL, track);
 	assert(scrobbler_update_now_playing_count == 1);
-	assert(strcmp(scrobbler_update_now_playing_sbt.artist, "The Beatles") == 0);
-	assert(strcmp(scrobbler_update_now_playing_sbt.track, "Yellow Submarine") == 0);
 
 #if ENABLE_LIBNOTIFY
 	config.notification = 1;
@@ -44,6 +44,37 @@ int main(void) {
 	assert(scrobbler_update_now_playing_count == 2);
 #if ENABLE_LIBNOTIFY
 	assert(cmusfm_notify_show_count == 1);
+#endif
+
+	/* reshow now playing notification after a long pause */
+
+	config.nowplaying_localfile = 1;
+
+	track->status = CMSTATUS_PLAYING;
+	cmusfm_server_update_record_checksum(track);
+
+	cmusfm_server_process_data(NULL, track);
+	assert(scrobbler_update_now_playing_count == 3);
+
+	/* track was played for a few seconds */
+	sleep(10);
+
+	track->status = CMSTATUS_PAUSED;
+	cmusfm_server_update_record_checksum(track);
+
+	cmusfm_server_process_data(NULL, track);
+	assert(scrobbler_update_now_playing_count == 3);
+
+	/* track was unpaused after more than 120 seconds */
+	sleep(121);
+
+	track->status = CMSTATUS_PLAYING;
+	cmusfm_server_update_record_checksum(track);
+
+	cmusfm_server_process_data(NULL, track);
+	assert(scrobbler_update_now_playing_count == 4);
+#if ENABLE_LIBNOTIFY
+	assert(cmusfm_notify_show_count == 3);
 #endif
 
 	return EXIT_SUCCESS;
