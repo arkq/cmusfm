@@ -469,7 +469,7 @@ char *mem2hex(char *dest, const unsigned char *mem, size_t n) {
 
 	const char hexchars[] = "0123456789abcdef";
 	char *ptr = dest;
-	int i;
+	size_t i;
 
 	for (i = 0; i < n; i++) {
 		*(ptr++) = hexchars[(mem[i] >> 4) & 0x0f];
@@ -485,7 +485,7 @@ char *mem2hex(char *dest, const unsigned char *mem, size_t n) {
  * mem should be big enough to contain n / 2 bytes. */
 unsigned char *hex2mem(unsigned char *mem, const char *src, size_t n) {
 
-	int i;
+	size_t i;
 
 	n /= 2;
 	for (i = 0; i < n; i++) {

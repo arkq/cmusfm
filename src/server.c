@@ -74,14 +74,14 @@ static char *get_record_location(const struct cmusfm_data_record *r) {
 
 /* Return the checksum for the length-invariant part of the record. */
 static uint8_t make_record_checksum1(const struct cmusfm_data_record *r) {
-	return make_data_hash((char *)&r->status,
+	return make_data_hash((unsigned char *)&r->status,
 			sizeof(*r) - ((void *)&r->status - (void *)r));
 }
 
 /* Return the data checksum of the given record structure. This checksum
  * does not include status field, so it can be used for data comparison. */
 static uint8_t make_record_checksum2(const struct cmusfm_data_record *r) {
-	return make_data_hash((char *)&r->track_number,
+	return make_data_hash((unsigned char *)&r->track_number,
 			sizeof(*r) - ((void *)&r->track_number - (void *)r) +
 			r->off_title + r->off_location + strlen(get_record_location(r)));
 }
@@ -299,7 +299,6 @@ int cmusfm_server_start(void) {
 #if HAVE_SYS_INOTIFY_H
 	struct inotify_event inot_even;
 #endif
-	int retval;
 
 	debug("starting server");
 
@@ -361,14 +360,6 @@ int cmusfm_server_start(void) {
 #endif
 	}
 
-	retval = 0;
-	goto return_success;
-
-return_failure:
-	retval = -1;
-
-return_success:
-
 #if HAVE_SYS_INOTIFY_H
 	close(pfds[2].fd);
 #endif
@@ -379,7 +370,7 @@ return_success:
 	mq_close(pfds[0].fd);
 	mq_unlink(mqueue_name);
 
-	return retval;
+	return 0;
 }
 
 /* Send track info to server instance. */

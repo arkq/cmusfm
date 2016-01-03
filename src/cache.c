@@ -43,14 +43,14 @@ static size_t get_cache_record_size(const struct cmusfm_cache_record *record) {
 /* Return the checksum for the length-invariant part of the cache record
  * structure - segmentation-fault-safe checksum. */
 static uint8_t get_cache_record_checksum1(const struct cmusfm_cache_record *record) {
-	return make_data_hash((char *)&record->timestamp,
+	return make_data_hash((unsigned char *)&record->timestamp,
 			sizeof(*record) - ((void *)&record->timestamp - (void *)record));
 }
 
 /* Return the data checksum of the given cache record structure. If the
  * overall record length is compromised, we might end up dead... */
 static uint8_t get_cache_record_checksum2(const struct cmusfm_cache_record *record) {
-	return make_data_hash((char *)&record->timestamp,
+	return make_data_hash((unsigned char *)&record->timestamp,
 			get_cache_record_size(record) - ((void *)&record->timestamp - (void *)record));
 }
 
