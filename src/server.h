@@ -24,8 +24,8 @@
 #include "cmusfm.h"
 
 
-/* message size for message queue */
-#define MQUEUE_BUFFER_SIZE 512
+/* communication socket buffer size */
+#define CMSOCKET_BUFFER_SIZE 1024
 
 /* shoutcast/stream flag for the status field */
 #define CMSTATUS_SHOUTCASTMASK 0xF0
@@ -61,5 +61,6 @@ struct cmusfm_data_record {
 int cmusfm_server_check(void);
 int cmusfm_server_start(void);
 int cmusfm_server_send_track(struct cmtrack_info *tinfo);
+char *get_cmusfm_socket_file(void);
 
 #endif

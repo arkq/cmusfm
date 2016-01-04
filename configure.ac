@@ -25,14 +25,6 @@ AC_CHECK_LIB(
 	[], [AC_MSG_ERROR([crypto library not found])]
 )
 AC_CHECK_HEADERS(
-	[mqueue.h],
-	[], [AC_MSG_ERROR([mqueue.h header not found])]
-)
-AC_CHECK_LIB(
-	[rt], [mq_open],
-	[], [AC_MSG_ERROR([rt library not found])]
-)
-AC_CHECK_HEADERS(
 	[poll.h],
 	[], [AC_MSG_ERROR([poll.h header not found])]
 )

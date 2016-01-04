@@ -26,8 +26,8 @@
 
 
 #define CONFIG_FNAME "cmusfm.conf"
+#define SOCKET_FNAME "cmusfm.socket"
 #define CACHE_FNAME  "cmusfm.cache"
-#define MQUEUE_NAME "cmusfm"
 
 
 /* time delay (in seconds) between login attempts to the Last.fm
@@ -40,6 +40,7 @@ extern unsigned char SC_api_key[16];
 extern unsigned char SC_secret[16];
 extern const char *cmusfm_cache_file;
 extern const char *cmusfm_config_file;
+extern const char *cmusfm_socket_file;
 extern struct cmusfm_config config;
 
 

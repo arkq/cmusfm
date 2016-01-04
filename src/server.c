@@ -24,16 +24,16 @@
 
 #include "server.h"
 
-#include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
-#include <mqueue.h>
 #include <poll.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #if HAVE_SYS_INOTIFY_H
 #include <sys/inotify.h>
 #endif
@@ -46,11 +46,6 @@
 #include "notify.h"
 #endif
 
-
-/* Helper function for retrieving message queue name. */
-static char *get_mqueue_name(void) {
-	return "/" MQUEUE_NAME;
-}
 
 /* Helper function for artist name retrieval. */
 static char *get_record_artist(const struct cmusfm_data_record *r) {
@@ -101,7 +96,7 @@ static void set_trackinfo(scrobbler_trackinfo_t *sbt,
 static void cmusfm_server_process_data(scrobbler_session_t *sbs,
 		const struct cmusfm_data_record *record) {
 
-	static char saved_data[MQUEUE_BUFFER_SIZE];
+	static char saved_data[CMSOCKET_BUFFER_SIZE];
 	static char saved_is_radio = 0;
 	struct cmusfm_data_record *saved_record = (struct cmusfm_data_record *)saved_data;
 
@@ -261,15 +256,23 @@ action_nowplaying:
  * appropriately. */
 int cmusfm_server_check(void) {
 
-	mqd_t mq;
+	struct sockaddr_un saddr;
+	int fd;
 
-	if ((mq = mq_open(get_mqueue_name(), O_WRONLY)) != -1) {
-		mq_close(mq);
+	memset(&saddr, 0, sizeof(saddr));
+	saddr.sun_family = AF_UNIX;
+	strcpy(saddr.sun_path, cmusfm_socket_file);
+
+	if ((fd = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
+		return -1;
+
+	/* check if behind the socket there is an active server instance */
+	if (connect(fd, (struct sockaddr *)(&saddr), sizeof(saddr)) == 0) {
+		close(fd);
 		return 1;
 	}
 
-	/* missing message queue is not an error here */
-	return errno == ENOENT ? 0 : -1;
+	return 0;
 }
 
 /* server shutdown stuff */
@@ -284,36 +287,31 @@ static void cmusfm_server_stop(int sig) {
  * Upon error -1 is returned. */
 int cmusfm_server_start(void) {
 
-	const char *mqueue_name = get_mqueue_name();
-	const struct mq_attr mqueue_attr = {
-		.mq_flags = O_NONBLOCK,
-		.mq_maxmsg = 10,
-		.mq_msgsize = MQUEUE_BUFFER_SIZE,
-		.mq_curmsgs = 0,
-	};
-
-	char buffer[mqueue_attr.mq_msgsize];
+	char buffer[CMSOCKET_BUFFER_SIZE];
 	scrobbler_session_t *sbs;
 	struct sigaction sigact;
+	struct sockaddr_un saddr;
 	struct pollfd pfds[3];
 #if HAVE_SYS_INOTIFY_H
 	struct inotify_event inot_even;
 #endif
+	size_t rd_len;
+	int retval;
 
 	debug("starting server");
 
 	/* setup poll structure for data reading */
 	pfds[0].events = POLLIN;  /* server */
-	pfds[1].events = POLLIN;  /* not used */
+	pfds[1].events = POLLIN;  /* client */
 	pfds[2].events = POLLIN;  /* inotify */
 	pfds[1].fd = -1;
 	pfds[2].fd = -1;
 
-	if ((pfds[0].fd = mq_open(mqueue_name,
-					O_CREAT | O_EXCL | O_RDONLY, 0600, &mqueue_attr)) == -1) {
-		perror("error: create message queue");
+	memset(&saddr, 0, sizeof(saddr));
+	saddr.sun_family = AF_UNIX;
+	strcpy(saddr.sun_path, cmusfm_socket_file);
+	if ((pfds[0].fd = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
 		return -1;
-	}
 
 	/* initialize scrobbling library */
 	sbs = scrobbler_initialize(SC_api_key, SC_secret);
@@ -331,6 +329,12 @@ int cmusfm_server_start(void) {
 	sigaction(SIGTERM, &sigact, NULL);
 	sigaction(SIGINT, &sigact, NULL);
 
+	/* create server communication socket */
+	unlink(saddr.sun_path);
+	if (bind(pfds[0].fd, (struct sockaddr *)(&saddr), sizeof(saddr)) == -1 ||
+			listen(pfds[0].fd, 2) == -1)
+		goto return_failure;
+
 #if HAVE_SYS_INOTIFY_H
 	/* initialize inode notification to watch changes in the config file */
 	pfds[2].fd = inotify_init();
@@ -344,13 +348,21 @@ int cmusfm_server_start(void) {
 			break;  /* signal interruption */
 
 		if (pfds[0].revents & POLLIN) {
-			mq_receive(pfds[0].fd, buffer, sizeof(buffer), NULL);
-			cmusfm_server_process_data(sbs, (struct cmusfm_data_record *)buffer);
+			pfds[1].fd = accept(pfds[0].fd, NULL, NULL);
+			debug("new client accepted: %d", pfds[1].fd);
+		}
+
+		if (pfds[1].revents & POLLIN && pfds[1].fd != -1) {
+			rd_len = read(pfds[1].fd, buffer, sizeof(buffer));
+			close(pfds[1].fd);
+			pfds[1].fd = -1;
+			if (rd_len >= sizeof(struct cmusfm_data_record))
+				cmusfm_server_process_data(sbs, (struct cmusfm_data_record *)buffer);
 		}
 
 #if HAVE_SYS_INOTIFY_H
 		if (pfds[2].revents & POLLIN) {
-			/* We're watching only one file, so the result if of no importance
+			/* We're watching only one file, so the result is of no importance
 			 * to us, simply read out the inotify file descriptor. */
 			read(pfds[2].fd, &inot_even, sizeof(inot_even));
 			debug("inotify event occurred: %x", inot_even.mask);
@@ -360,6 +372,14 @@ int cmusfm_server_start(void) {
 #endif
 	}
 
+	retval = 0;
+	goto return_success;
+
+return_failure:
+	retval = -1;
+
+return_success:
+
 #if HAVE_SYS_INOTIFY_H
 	close(pfds[2].fd);
 #endif
@@ -367,19 +387,20 @@ int cmusfm_server_start(void) {
 	cmusfm_notify_free();
 #endif
 	scrobbler_free(sbs);
-	mq_close(pfds[0].fd);
-	mq_unlink(mqueue_name);
+	close(pfds[0].fd);
+	unlink(saddr.sun_path);
 
-	return 0;
+	return retval;
 }
 
 /* Send track info to server instance. */
 int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
-	char buffer[MQUEUE_BUFFER_SIZE];
+	char buffer[CMSOCKET_BUFFER_SIZE];
 	struct cmusfm_data_record *record = (struct cmusfm_data_record *)buffer;
 	struct format_match *match, *matches;
-	mqd_t mq;
+	struct sockaddr_un saddr;
+	int sock;
 
 	/* helper accessors for dynamic fields */
 	char *artist = &buffer[sizeof(*record)];
@@ -463,15 +484,25 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	record->checksum1 = make_record_checksum1(record);
 	record->checksum2 = make_record_checksum2(record);
 
-	if ((mq = mq_open(get_mqueue_name(), O_WRONLY)) == -1) {
-		perror("error: open message queue");
+	/* connect to the communication socket */
+	memset(&saddr, 0, sizeof(saddr));
+	strcpy(saddr.sun_path, cmusfm_socket_file);
+	saddr.sun_family = AF_UNIX;
+	sock = socket(PF_UNIX, SOCK_STREAM, 0);
+	if (connect(sock, (struct sockaddr *)(&saddr), sizeof(saddr)) == -1) {
+		close(sock);
 		return -1;
 	}
 
 	debug("record length: %ld", sizeof(struct cmusfm_data_record) +
 			record->off_title + record->off_location + strlen(location) + 1);
-	mq_send(mq, buffer, sizeof(struct cmusfm_data_record) +
-			record->off_title + record->off_location + strlen(location) + 1, 0);
+	write(sock, buffer, sizeof(struct cmusfm_data_record) +
+			record->off_title + record->off_location + strlen(location) + 1);
 
-	return mq_close(mq);
+	return close(sock);
+}
+
+/* Helper function for retrieving server socket file. */
+char *get_cmusfm_socket_file(void) {
+	return get_cmus_home_file(SOCKET_FNAME);
 }
