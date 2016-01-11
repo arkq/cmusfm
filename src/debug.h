@@ -18,8 +18,8 @@
  * see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __DEBUG_H
-#define __DEBUG_H
+#ifndef CMUSFM_DEBUG_H_
+#define CMUSFM_DEBUG_H_
 
 #if HAVE_CONFIG_H
 #include "../config.h"
@@ -34,4 +34,4 @@
 #define debug(M, ...) {}
 #endif
 
-#endif
+#endif  /* CMUSFM_DEBUG_H_ */

@@ -18,8 +18,8 @@
  * see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CMUSFM_SERVER_H
-#define __CMUSFM_SERVER_H
+#ifndef CMUSFM_SERVER_H_
+#define CMUSFM_SERVER_H_
 
 #include "cmusfm.h"
 
@@ -63,4 +63,4 @@ int cmusfm_server_start(void);
 int cmusfm_server_send_track(struct cmtrack_info *tinfo);
 char *get_cmusfm_socket_file(void);
 
-#endif
+#endif  /* CMUSFM_SERVER_H_ */

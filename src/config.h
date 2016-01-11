@@ -18,8 +18,8 @@
  * see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CMUSFM_CONFIG_H
-#define __CMUSFM_CONFIG_H
+#ifndef CMUSFM_CONFIG_H_
+#define CMUSFM_CONFIG_H_
 
 #if HAVE_CONFIG_H
 #include "../config.h"
@@ -67,4 +67,4 @@ int cmusfm_config_write(const char *fname, struct cmusfm_config *conf);
 int cmusfm_config_add_watch(int fd);
 #endif
 
-#endif
+#endif  /* CMUSFM_CONFIG_H_ */

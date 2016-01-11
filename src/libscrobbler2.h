@@ -21,8 +21,8 @@
  *   http://www.last.fm/api/scrobbling
  */
 
-#ifndef __LIBSCROBBLER20_H
-#define __LIBSCROBBLER20_H
+#ifndef CMUSFM_LIBSCROBBLER2_H_
+#define CMUSFM_LIBSCROBBLER2_H_
 
 #include <stdint.h>
 #include <time.h>
@@ -69,4 +69,4 @@ int scrobbler_update_now_playing(scrobbler_session_t *sbs,
 		scrobbler_trackinfo_t *sbt);
 int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt);
 
-#endif
+#endif  /* CMUSFM_LIBSCROBBLER2_H_ */

@@ -18,8 +18,8 @@
  * see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CMUSFM_H
-#define __CMUSFM_H
+#ifndef CMUSFM_CMUSFM_H_
+#define CMUSFM_CMUSFM_H_
 
 #include "config.h"
 #include "libscrobbler2.h"
@@ -83,4 +83,4 @@ char *get_album_cover_file(const char *location, const char *format);
 struct format_match *get_regexp_format_matches(const char *str, const char *format);
 struct format_match *get_regexp_match(struct format_match *matches, enum format_match_type type);
 
-#endif
+#endif  /* CMUSFM_CMUSFM_H_ */

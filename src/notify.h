@@ -18,8 +18,8 @@
  * see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CMUSFM_NOTIFY_H
-#define __CMUSFM_NOTIFY_H
+#ifndef CMUSFM_NOTIFY_H_
+#define CMUSFM_NOTIFY_H_
 
 #include "libscrobbler2.h"
 
@@ -28,4 +28,4 @@ void cmusfm_notify_initialize();
 void cmusfm_notify_free();
 void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon);
 
-#endif
+#endif  /* CMUSFM_NOTIFY_H_ */

@@ -18,8 +18,8 @@
  * see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CMUSFM_CACHE_H
-#define __CMUSFM_CACHE_H
+#ifndef CMUSFM_CACHE_H_
+#define CMUSFM_CACHE_H_
 
 #include <stdint.h>
 #include "libscrobbler2.h"
@@ -61,4 +61,4 @@ void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf);
 void cmusfm_cache_submit(scrobbler_session_t *sbs);
 char *get_cmusfm_cache_file(void);
 
-#endif
+#endif  /* CMUSFM_CACHE_H_ */
