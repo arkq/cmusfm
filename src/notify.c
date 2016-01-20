@@ -1,6 +1,6 @@
 /*
  * cmusfm - notify.c
- * Copyright (c) 2014 Arkadiusz Bokowy
+ * Copyright (c) 2014-2016 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -24,6 +24,8 @@
 #include <string.h>
 #include <libnotify/notify.h>
 
+#include "debug.h"
+
 
 /* global notification handler */
 static NotifyNotification *cmus_notify;
@@ -32,8 +34,13 @@ static NotifyNotification *cmus_notify;
 /* Show track information via the notification system. */
 void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon) {
 
+	GError *error = NULL;
 	char *body;
 	size_t art_len, alb_len;
+
+	/* initialize the notification subsystem if needed */
+	if (!notify_is_initted())
+		cmusfm_notify_initialize();
 
 	if (cmus_notify) {
 		/* forcefully close previous notification */
@@ -50,7 +57,15 @@ void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon) 
 		sprintf(&body[art_len], " (%s)", sb_tinf->album);
 
 	cmus_notify = notify_notification_new(sb_tinf->track, body, icon);
-	notify_notification_show(cmus_notify, NULL);
+	if (!notify_notification_show(cmus_notify, &error)) {
+		debug("desktop notify error: %s", error->message);
+		g_error_free(error);
+		/* NOTE: Free the notification subsystem upon show failure. This action
+		 *       allows us to recover from the D-Bus connection failure, which
+		 *       might be caused by the notification daemon restart. */
+		cmusfm_notify_free();
+	}
+
 	free(body);
 }
 
@@ -62,7 +77,9 @@ void cmusfm_notify_initialize() {
 
 /* Free notification system resources. */
 void cmusfm_notify_free() {
-	if (cmus_notify)
+	if (cmus_notify) {
 		g_object_unref(G_OBJECT(cmus_notify));
+		cmus_notify = NULL;
+	}
 	notify_uninit();
 }

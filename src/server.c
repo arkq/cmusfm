@@ -317,11 +317,6 @@ int cmusfm_server_start(void) {
 	sbs = scrobbler_initialize(SC_api_key, SC_secret);
 	scrobbler_set_session_key_str(sbs, config.session_key);
 
-#if ENABLE_LIBNOTIFY
-	/* initialize notification library */
-	cmusfm_notify_initialize();
-#endif
-
 	/* catch signals which are used to quit server */
 	memset(&sigact, 0, sizeof(sigact));
 	sigact.sa_handler = cmusfm_server_stop;
