@@ -1,6 +1,6 @@
 /*
  * cmusfm - utils.c
- * Copyright (c) 2014-2015 Arkadiusz Bokowy
+ * Copyright (c) 2014-2016 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -73,6 +73,32 @@ char *get_cmus_home_file(const char *file) {
 
 	free(home);
 	return fullpath;
+}
+
+/* This function is an extension for the standard mkdir() one. It will try to
+ * recursively create given directory in the same fashion like the `mkdir -p`
+ * *nix command. On success it returns zero, or -1 if an error occurred. In
+ * the latter case, the state of the directory structure is undefined - this
+ * function does not provide self clean-up. */
+int mkdirp(const char *dir, mode_t mode) {
+
+	char *tmp = strdup(dir);
+	char *p = tmp;
+	size_t len;
+
+	len = strlen(tmp);
+	if(tmp[len - 1] == '/')
+		tmp[len - 1] = '\0';
+
+	for (; *p; p++)
+		if (*p == '/') {
+			*p = '\0';
+			mkdir(tmp, mode);
+			*p = '/';
+		}
+
+	free(tmp);
+	return mkdir(dir, mode);
 }
 
 /* Simple and fast "hashing" function. */

@@ -1,6 +1,6 @@
 /*
  * cmusfm - main.c
- * Copyright (c) 2010-2015 Arkadiusz Bokowy
+ * Copyright (c) 2010-2016 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -118,6 +118,9 @@ static void cmusfm_initialization(void) {
 
 	fetch_session_key = 1;
 	sbs = scrobbler_initialize(SC_api_key, SC_secret);
+
+	/* try to make sure that the configuration directory exists */
+	mkdirp(get_cmus_home_dir(), S_IRWXU);
 
 	/* try to read previous configuration */
 	if (cmusfm_config_read(cmusfm_config_file, &conf) == 0) {

@@ -1,6 +1,6 @@
 /*
  * cmusfm - cmusfm.h
- * Copyright (c) 2010-2015 Arkadiusz Bokowy
+ * Copyright (c) 2010-2016 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -20,6 +20,8 @@
 
 #ifndef CMUSFM_CMUSFM_H_
 #define CMUSFM_CMUSFM_H_
+
+#include <sys/stat.h>
 
 #include "config.h"
 #include "libscrobbler2.h"
@@ -76,6 +78,7 @@ struct format_match {
 
 char *get_cmus_home_dir(void);
 char *get_cmus_home_file(const char *file);
+int mkdirp(const char *dir, mode_t mode);
 int make_data_hash(const unsigned char *data, int len);
 #if ENABLE_LIBNOTIFY
 char *get_album_cover_file(const char *location, const char *format);
