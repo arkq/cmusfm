@@ -101,8 +101,8 @@ static struct cmtrack_info *get_track_info(int argc, char *argv[]) {
 
 /* User authorization callback for the initialization process. */
 static int user_authorization(const char *url) {
-	printf("Open this URL in your favorite web browser and afterwards "
-			"press ENTER:\n  %s\n", url);
+	printf("Grant access to your Last.fm account using the link below,"
+			" then press ENTER:\n  %s\n", url);
 	getchar();
 	return 0;
 }
