@@ -12,19 +12,19 @@ const char *cmusfm_socket_file = NULL;
 /* mock subscription subsystem - with the invocation counter */
 scrobbler_trackinfo_t scrobbler_scrobble_sbt = { 0 };
 int scrobbler_scrobble_count = 0;
-int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt) {
+scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt) {
 	memcpy(&scrobbler_scrobble_sbt, sbt, sizeof(scrobbler_scrobble_sbt));
 	scrobbler_scrobble_count++;
-	return 0;
+	return SCROBBLER_STATUS_OK;
 }
 
 /* mock now-playing subsystem - with the invocation counter */
 scrobbler_trackinfo_t scrobbler_update_now_playing_sbt = { 0 };
 int scrobbler_update_now_playing_count = 0;
-int scrobbler_update_now_playing(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt) {
+scrobbler_status_t scrobbler_update_now_playing(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt) {
 	memcpy(&scrobbler_update_now_playing_sbt, sbt, sizeof(scrobbler_update_now_playing_sbt));
 	scrobbler_update_now_playing_count++;
-	return 0;
+	return SCROBBLER_STATUS_OK;
 }
 
 /* mock notification subsystem - with the invocation counter */
@@ -51,4 +51,4 @@ void cmusfm_notify_free() {}
 scrobbler_session_t *scrobbler_initialize(uint8_t api_key[16], uint8_t secret[16]) { return NULL; }
 void scrobbler_free(scrobbler_session_t *sbs) {}
 void scrobbler_set_session_key_str(scrobbler_session_t *sbs, const char *str) {}
-int scrobbler_test_session_key(scrobbler_session_t *sbs) { return 0; }
+scrobbler_status_t scrobbler_test_session_key(scrobbler_session_t *sbs) { return 0; }

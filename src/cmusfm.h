@@ -22,6 +22,7 @@
 #define CMUSFM_CMUSFM_H_
 
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #include "config.h"
 #include "libscrobbler2.h"

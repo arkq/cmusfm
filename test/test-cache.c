@@ -10,9 +10,9 @@ const char *cmusfm_cache_file;
 
 /* library function used by the cache code */
 int scrobbler_scrobble_count = 0;
-int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt) {
+scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt) {
 	scrobbler_scrobble_count++;
-	return 0;
+	return SCROBBLER_STATUS_OK;
 }
 
 int main(void) {

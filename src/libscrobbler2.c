@@ -103,30 +103,30 @@ static void sb_curl_cleanup(CURL *curl, struct sb_response_data *response) {
 }
 
 /* Check scrobble API response status (and curl itself). */
-static int sb_check_response(struct sb_response_data *response,
+static scrobbler_status_t sb_check_response(struct sb_response_data *response,
 		int curl_status, scrobbler_session_t *sbs) {
 
 	debug("check: status: %d, body: %s", curl_status, response->data);
 
 	/* network transfer failure (curl error) */
 	if (curl_status != 0) {
-		sbs->error_code = curl_status;
-		return SCROBBERR_CURLPERF;
+		sbs->errornum = curl_status;
+		return sbs->status = SCROBBLER_STATUS_ERR_CURLPERF;
 	}
 
 	/* scrobbler service failure */
 	if (strstr(response->data, "<lfm status=\"ok\"") == NULL) {
 		char *error = strstr(response->data, "<error code=");
 		if (error != NULL)
-			sbs->error_code = atoi(error + 13);
+			sbs->errornum = atoi(error + 13);
 		else
 			/* error code was not found in the response, so maybe we are calling
 			 * wrong service... set error code as value not used by the Last.fm */
-			sbs->error_code = 1;
-		return SCROBBERR_SBERROR;
+			sbs->errornum = 1;
+		return sbs->status = SCROBBLER_STATUS_ERR_SCROBAPI;
 	}
 
-	return 0;
+	return sbs->status = SCROBBLER_STATUS_OK;
 }
 
 /* Generate MD5 scrobbler API method signature. */
@@ -190,10 +190,10 @@ static char *sb_make_curl_getpost_string(CURL *curl, char *str_buffer,
 }
 
 /* Scrobble a track. */
-int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt) {
+scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
+		scrobbler_trackinfo_t *sbt) {
 
 	CURL *curl;
-	int status;
 	uint8_t sign[MD5_DIGEST_LENGTH];
 	char api_key_hex[sizeof(sbs->api_key) * 2 + 1];
 	char session_key_hex[sizeof(sbs->session_key) * 2 + 1];
@@ -225,10 +225,10 @@ int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt) {
 			sbt->track_number, sbt->track, sbt->duration);
 
 	if (sbt->artist == NULL || sbt->track == NULL || sbt->timestamp == 0)
-		return SCROBBERR_TRACKINF;
+		return sbs->status = SCROBBLER_STATUS_ERR_TRACKINF;
 
 	if ((curl = sb_curl_init(CURLOPT_POST, &response)) == NULL)
-		return SCROBBERR_CURLINIT;
+		return sbs->status = SCROBBLER_STATUS_ERR_CURLINIT;
 
 	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
 	mem2hex(session_key_hex, sbs->session_key, sizeof(sbs->session_key));
@@ -241,21 +241,20 @@ int scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt) {
 	sb_make_curl_getpost_string(curl, post_data, sb_data, 12);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
 	curl_easy_setopt(curl, CURLOPT_URL, SCROBBLER_URL);
-	status = curl_easy_perform(curl);
-	status = sb_check_response(&response, status, sbs);
-	debug("scrobble status: %d", status);
+
+	sb_check_response(&response, curl_easy_perform(curl), sbs);
+	debug("scrobble status: %d", sbs->status);
 
 	sb_curl_cleanup(curl, &response);
-	return status;
+	return sbs->status;
 }
 
 /* Notify Last.fm that a user has started listening to a track. This
- * is an engine function (without required argument check). */
-static int sb_update_now_playing(scrobbler_session_t *sbs,
+ * is an engine function (without a check for required arguments). */
+static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 		scrobbler_trackinfo_t *sbt) {
 
 	CURL *curl;
-	int status;
 	uint8_t sign[MD5_DIGEST_LENGTH];
 	char api_key_hex[sizeof(sbs->api_key) * 2 + 1];
 	char session_key_hex[sizeof(sbs->session_key) * 2 + 1];
@@ -285,7 +284,7 @@ static int sb_update_now_playing(scrobbler_session_t *sbs,
 			sbt->track_number, sbt->track, sbt->duration);
 
 	if ((curl = sb_curl_init(CURLOPT_POST, &response)) == NULL)
-		return SCROBBERR_CURLINIT;
+		return sbs->status = SCROBBLER_STATUS_ERR_CURLINIT;
 
 	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
 	mem2hex(session_key_hex, sbs->session_key, sizeof(sbs->session_key));
@@ -298,38 +297,37 @@ static int sb_update_now_playing(scrobbler_session_t *sbs,
 	sb_make_curl_getpost_string(curl, post_data, sb_data, 11);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
 	curl_easy_setopt(curl, CURLOPT_URL, SCROBBLER_URL);
-	status = curl_easy_perform(curl);
-	status = sb_check_response(&response, status, sbs);
-	debug("now playing status: %d", status);
+
+	sb_check_response(&response, curl_easy_perform(curl), sbs);
+	debug("now playing status: %d", sbs->status);
 
 	sb_curl_cleanup(curl, &response);
-	return status;
+	return sbs->status;
 }
 
 /* Update "Now playing" notification. */
-int scrobbler_update_now_playing(scrobbler_session_t *sbs,
+scrobbler_status_t scrobbler_update_now_playing(scrobbler_session_t *sbs,
 		scrobbler_trackinfo_t *sbt) {
 	debug("now playing wrapper");
 	if (sbt->artist == NULL || sbt->track == NULL)
-		return SCROBBERR_TRACKINF;
+		return sbs->status = SCROBBLER_STATUS_ERR_TRACKINF;
 	return sb_update_now_playing(sbs, sbt);
 }
 
 /* Hard-codded method for validating session key. This approach uses the
  * updateNotify method call with the wrong number of parameters as a test
  * call. */
-int scrobbler_test_session_key(scrobbler_session_t *sbs) {
+scrobbler_status_t scrobbler_test_session_key(scrobbler_session_t *sbs) {
 
-	scrobbler_trackinfo_t sbt;
-	int status;
+	scrobbler_status_t status;
+	scrobbler_trackinfo_t sbt = { 0 };
 
 	debug("test service connection");
-	memset(&sbt, 0, sizeof(sbt));
 	status = sb_update_now_playing(sbs, &sbt);
 
 	/* 'invalid parameters' is not an error in this case :) */
-	if (status == SCROBBERR_SBERROR && sbs->error_code == 6)
-		return 0;
+	if (status == SCROBBLER_STATUS_ERR_SCROBAPI && sbs->errornum == 6)
+		return sbs->status = SCROBBLER_STATUS_OK;
 
 	return status;
 }
@@ -346,11 +344,11 @@ void scrobbler_set_session_key_str(scrobbler_session_t *sbs, const char *str) {
 }
 
 /* Perform scrobbler service authentication process. */
-int scrobbler_authentication(scrobbler_session_t *sbs,
+scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 		scrobbler_authuser_callback_t callback) {
 
 	CURL *curl;
-	int status;
+	scrobbler_status_t status;
 	uint8_t sign[MD5_DIGEST_LENGTH];
 	char api_key_hex[sizeof(sbs->api_key) * 2 + 1];
 	char sign_hex[sizeof(sign) * 2 + 1], token_hex[33];
@@ -371,7 +369,7 @@ int scrobbler_authentication(scrobbler_session_t *sbs,
 	};
 
 	if ((curl = sb_curl_init(CURLOPT_HTTPGET, &response)) == NULL)
-		return SCROBBERR_CURLINIT;
+		return sbs->status = SCROBBLER_STATUS_ERR_CURLINIT;
 
 	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
 
@@ -383,10 +381,9 @@ int scrobbler_authentication(scrobbler_session_t *sbs,
 	strcpy(get_url, SCROBBLER_URL "?");
 	sb_make_curl_getpost_string(curl, get_url + strlen(get_url), sb_data_token, 3);
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
-	status = curl_easy_perform(curl);
-	status = sb_check_response(&response, status, sbs);
 
-	if (status != 0) {
+	status = sb_check_response(&response, curl_easy_perform(curl), sbs);
+	if (status != SCROBBLER_STATUS_OK) {
 		sb_curl_cleanup(curl, &response);
 		return status;
 	}
@@ -399,7 +396,7 @@ int scrobbler_authentication(scrobbler_session_t *sbs,
 			api_key_hex, token_hex);
 	if (callback(get_url) != 0) {
 		sb_curl_cleanup(curl, &response);
-		return SCROBBERR_CALLBACK;
+		return sbs->status = SCROBBLER_STATUS_ERR_CALLBACK;
 	}
 
 	/* make signature for auth.getSession API call */
@@ -413,11 +410,10 @@ int scrobbler_authentication(scrobbler_session_t *sbs,
 	strcpy(get_url, SCROBBLER_URL "?");
 	sb_make_curl_getpost_string(curl, get_url + strlen(get_url), sb_data_session, 4);
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
-	status = curl_easy_perform(curl);
-	status = sb_check_response(&response, status, sbs);
-	debug("authentication status: %d", status);
 
-	if (status != 0) {
+	status = sb_check_response(&response, curl_easy_perform(curl), sbs);
+	debug("authentication status: %d", sbs->status);
+	if (status != SCROBBLER_STATUS_OK) {
 		sb_curl_cleanup(curl, &response);
 		return status;
 	}
@@ -431,7 +427,7 @@ int scrobbler_authentication(scrobbler_session_t *sbs,
 	hex2mem(sbs->session_key, get_url, sizeof(sbs->session_key) * 2);
 
 	sb_curl_cleanup(curl, &response);
-	return 0;
+	return SCROBBLER_STATUS_OK;
 }
 
 /* Initialize scrobbler session. On success this function returns pointer
@@ -460,6 +456,59 @@ scrobbler_session_t *scrobbler_initialize(uint8_t api_key[16],
 void scrobbler_free(scrobbler_session_t *sbs) {
 	curl_global_cleanup();
 	free(sbs);
+}
+
+/* Get the human-readable error message. */
+const char *scrobbler_strerror(scrobbler_session_t *sbs) {
+	switch (sbs->status) {
+	case SCROBBLER_STATUS_OK:
+		return "Success";
+	case SCROBBLER_STATUS_ERR_CURLINIT:
+		return "CURL initialization failure";
+	case SCROBBLER_STATUS_ERR_CURLPERF:
+		return curl_easy_strerror(sbs->errornum);
+	case SCROBBLER_STATUS_ERR_SCROBAPI:
+		switch (sbs->errornum){
+		case 2:
+			return "API: Invalid service";
+		case 3:
+			return "API: Invalid method";
+		case 4:
+			return "API: Authentication failed";
+		case 5:
+			return "API: Invalid format";
+		case 6:
+			return "API: Invalid parameters";
+		case 7:
+			return "API: Invalid resource";
+		case 8:
+			return "API: Operation failed";
+		case 9:
+			return "API: Invalid session key";
+		case 10:
+			return "API: Invalid API key";
+		case 11:
+			return "API: Service temporarily unavailable";
+		case 13:
+			return "API: Invalid signature";
+		case 14:
+			return "API: Token not authorized";
+		case 15:
+			return "API: Token has expired";
+		case 16:
+			return "API: Temporary error - please tray again";
+		case 26:
+			return "API: Suspended API key";
+		case 29:
+			return "API: Rate limit exceeded";
+		default:
+			return "API: Unknown error";
+		}
+	case SCROBBLER_STATUS_ERR_CALLBACK:
+		return "Authentication callback failure";
+	case SCROBBLER_STATUS_ERR_TRACKINF:
+		return "Missing required data for track";
+	}
 }
 
 /* Dump memory pointed by the mem into the dest string in the hexadecimal

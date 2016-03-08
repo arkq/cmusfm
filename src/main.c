@@ -144,7 +144,7 @@ static void cmusfm_initialization(void) {
 			strncpy(conf.user_name, sbs->user_name, sizeof(conf.user_name) - 1);
 		}
 		else
-			printf("Error: scrobbler authentication failed\n");
+			printf("Error: %s\n", scrobbler_strerror(sbs));
 	}
 	scrobbler_free(sbs);
 
