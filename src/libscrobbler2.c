@@ -1,6 +1,6 @@
 /*
  * cmusfm - libscrobbler2.c
- * Copyright (c) 2011-2015 Arkadiusz Bokowy
+ * Copyright (c) 2011-2016 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -61,8 +61,8 @@ static size_t sb_curl_write_callback(char *ptr, size_t size, size_t nmemb,
 
 	debug("read: size: %zu, body: %s", size, ptr);
 
-	/* passing a zero bytes data to this callback is not en error,
-	 * however memory allocation fail is */
+	/* XXX: Passing a zero bytes data to this callback is not en error,
+	 *      however memory allocation fail is. */
 	if (!size || (rd->data = realloc(rd->data, rd->size + size + 1)) == NULL)
 		return 0;
 
@@ -81,11 +81,14 @@ static CURL *sb_curl_init(CURLoption method, struct sb_response_data *response) 
 	if ((curl = curl_easy_init()) == NULL)
 		return NULL;
 
+	/* do not hang "forever" during connection and data transfer */
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 15);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
+
 #if CURLOPT_PROTOCOLS
 	curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
 #endif
 	curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
 
 	curl_easy_setopt(curl, method, 1);
 
@@ -315,21 +318,11 @@ scrobbler_status_t scrobbler_update_now_playing(scrobbler_session_t *sbs,
 }
 
 /* Hard-codded method for validating session key. This approach uses the
- * updateNotify method call with the wrong number of parameters as a test
- * call. */
+ * updateNotify method call with invalid parameters as a test call. */
 scrobbler_status_t scrobbler_test_session_key(scrobbler_session_t *sbs) {
-
-	scrobbler_status_t status;
-	scrobbler_trackinfo_t sbt = { 0 };
-
-	debug("test service connection");
-	status = sb_update_now_playing(sbs, &sbt);
-
-	/* 'invalid parameters' is not an error in this case :) */
-	if (status == SCROBBLER_STATUS_ERR_SCROBAPI && sbs->errornum == 6)
-		return sbs->status = SCROBBLER_STATUS_OK;
-
-	return status;
+	debug("session validation wrapper");
+	scrobbler_trackinfo_t sbt = { .artist = "", .track = "" };
+	return sb_update_now_playing(sbs, &sbt);
 }
 
 /* Return the session key in the string hex dump. The memory block pointed by

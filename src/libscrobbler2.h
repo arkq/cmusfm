@@ -1,6 +1,6 @@
 /*
  * cmusfm - libscrobbler2.h
- * Copyright (c) 2011-2014 Arkadiusz Bokowy
+ * Copyright (c) 2011-2016 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -28,7 +28,7 @@
 #include <time.h>
 
 #define SCROBBLER_URL "http://ws.audioscrobbler.com/2.0/"
-#define SCROBBLER_USERAUTH_URL "http://www.last.fm/api/auth/"
+#define SCROBBLER_USERAUTH_URL "http://www.last.fm/api/auth"
 
 /* Status definitions. For more comprehensive information about errors,
  * see the errornum variable in the session structure. */
