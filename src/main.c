@@ -180,7 +180,7 @@ int main(int argc, char *argv[]) {
 		printf("usage: %s [init]\n\n"
 "NOTE: Before usage with the cmus you should invoke this program with the\n"
 "      `init` argument. Afterwards you can set the status_display_program\n"
-"      (for more informations see `man cmus`). Enjoy!\n", argv[0]);
+"      (for more information see `man cmus`). Enjoy!\n", argv[0]);
 		return EXIT_SUCCESS;
 	}
 
