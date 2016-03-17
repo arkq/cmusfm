@@ -180,7 +180,7 @@ static char *sb_make_curl_getpost_string(CURL *curl, char *str_buffer,
 			curl_free(escaped_data);
 		}
 		else
-		/* non-string content -> no need for escaping */
+			/* non-string content - no need for escaping */
 			offset += sprintf(str_buffer + offset, format,
 					sb_data[x].name, sb_data[x].data);
 	}
@@ -461,7 +461,7 @@ const char *scrobbler_strerror(scrobbler_session_t *sbs) {
 	case SCROBBLER_STATUS_ERR_CURLPERF:
 		return curl_easy_strerror(sbs->errornum);
 	case SCROBBLER_STATUS_ERR_SCROBAPI:
-		switch (sbs->errornum){
+		switch (sbs->errornum) {
 		case 2:
 			return "API: Invalid service";
 		case 3:

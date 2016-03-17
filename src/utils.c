@@ -87,7 +87,7 @@ int mkdirp(const char *dir, mode_t mode) {
 	size_t len;
 
 	len = strlen(tmp);
-	if(tmp[len - 1] == '/')
+	if (tmp[len - 1] == '/')
 		tmp[len - 1] = '\0';
 
 	for (; *p; p++)
