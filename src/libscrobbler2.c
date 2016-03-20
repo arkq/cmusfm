@@ -29,7 +29,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <curl/curl.h>
-#include <openssl/md5.h>
+
+#if defined(__APPLE__)
+# define COMMON_DIGEST_FOR_OPENSSL
+# include <CommonCrypto/CommonDigest.h>
+# define MD5 CC_MD5
+#else
+# include <openssl/md5.h>
+#endif
 
 #include "debug.h"
 
