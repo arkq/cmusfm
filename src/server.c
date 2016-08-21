@@ -256,11 +256,9 @@ action_nowplaying:
  * appropriately. */
 int cmusfm_server_check(void) {
 
-	struct sockaddr_un saddr;
+	struct sockaddr_un saddr = { .sun_family = AF_UNIX };
 	int fd;
 
-	memset(&saddr, 0, sizeof(saddr));
-	saddr.sun_family = AF_UNIX;
 	strcpy(saddr.sun_path, cmusfm_socket_file);
 
 	if ((fd = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
@@ -289,9 +287,6 @@ int cmusfm_server_start(void) {
 
 	char buffer[CMSOCKET_BUFFER_SIZE];
 	scrobbler_session_t *sbs;
-	struct sigaction sigact;
-	struct sockaddr_un saddr;
-	struct pollfd pfds[3];
 #if HAVE_SYS_INOTIFY_H
 	struct inotify_event inot_even;
 #endif
@@ -301,15 +296,15 @@ int cmusfm_server_start(void) {
 	debug("starting server");
 
 	/* setup poll structure for data reading */
-	pfds[0].events = POLLIN;  /* server */
-	pfds[1].events = POLLIN;  /* client */
-	pfds[2].events = POLLIN;  /* inotify */
-	pfds[1].fd = -1;
-	pfds[2].fd = -1;
+	struct pollfd pfds[3] = {
+		{ -1, POLLIN, 0 },  /* server */
+		{ -1, POLLIN, 0 },  /* client */
+		{ -1, POLLIN, 0 },  /* inotify */
+	};
 
-	memset(&saddr, 0, sizeof(saddr));
-	saddr.sun_family = AF_UNIX;
+	struct sockaddr_un saddr = { .sun_family = AF_UNIX };
 	strcpy(saddr.sun_path, cmusfm_socket_file);
+
 	if ((pfds[0].fd = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
 		return -1;
 
@@ -318,17 +313,17 @@ int cmusfm_server_start(void) {
 	scrobbler_set_session_key_str(sbs, config.session_key);
 
 	/* catch signals which are used to quit server */
-	memset(&sigact, 0, sizeof(sigact));
-	sigact.sa_handler = cmusfm_server_stop;
-	sigaction(SIGHUP, &sigact, NULL);
+	struct sigaction sigact = { .sa_handler = cmusfm_server_stop };
 	sigaction(SIGTERM, &sigact, NULL);
+	sigaction(SIGHUP, &sigact, NULL);
 	sigaction(SIGINT, &sigact, NULL);
 
 	/* create server communication socket */
 	unlink(saddr.sun_path);
-	if (bind(pfds[0].fd, (struct sockaddr *)(&saddr), sizeof(saddr)) == -1 ||
-			listen(pfds[0].fd, 2) == -1)
-		goto return_failure;
+	if (bind(pfds[0].fd, (struct sockaddr *)(&saddr), sizeof(saddr)) == -1)
+		goto fail;
+	if (listen(pfds[0].fd, 2) == -1)
+		goto fail;
 
 #if HAVE_SYS_INOTIFY_H
 	/* initialize inode notification to watch changes in the config file */
@@ -368,12 +363,12 @@ int cmusfm_server_start(void) {
 	}
 
 	retval = 0;
-	goto return_success;
+	goto final;
 
-return_failure:
+fail:
 	retval = -1;
 
-return_success:
+final:
 
 #if HAVE_SYS_INOTIFY_H
 	close(pfds[2].fd);
@@ -394,7 +389,6 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	char buffer[CMSOCKET_BUFFER_SIZE];
 	struct cmusfm_data_record *record = (struct cmusfm_data_record *)buffer;
 	struct format_match *match, *matches;
-	struct sockaddr_un saddr;
 	int sock;
 
 	/* helper accessors for dynamic fields */
@@ -480,9 +474,8 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	record->checksum2 = make_record_checksum2(record);
 
 	/* connect to the communication socket */
-	memset(&saddr, 0, sizeof(saddr));
+	struct sockaddr_un saddr = { .sun_family = AF_UNIX };
 	strcpy(saddr.sun_path, cmusfm_socket_file);
-	saddr.sun_family = AF_UNIX;
 	sock = socket(PF_UNIX, SOCK_STREAM, 0);
 	if (connect(sock, (struct sockaddr *)(&saddr), sizeof(saddr)) == -1) {
 		close(sock);
