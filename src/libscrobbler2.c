@@ -1,6 +1,6 @@
 /*
  * cmusfm - libscrobbler2.c
- * Copyright (c) 2011-2016 Arkadiusz Bokowy
+ * Copyright (c) 2011-2017 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -30,15 +30,8 @@
 #include <string.h>
 #include <curl/curl.h>
 
-#if defined(__APPLE__)
-# define COMMON_DIGEST_FOR_OPENSSL
-# include <CommonCrypto/CommonDigest.h>
-# define MD5 CC_MD5
-#else
-# include <openssl/md5.h>
-#endif
-
 #include "debug.h"
+#include "md5.c"
 
 
 static char *mem2hex(char *dest, const unsigned char *mem, size_t n);
