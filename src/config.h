@@ -1,6 +1,6 @@
 /*
  * cmusfm - config.h
- * Copyright (c) 2014 Arkadiusz Bokowy
+ * Copyright (c) 2014-2017 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -41,7 +41,7 @@
 
 struct cmusfm_config {
 	char user_name[64];
-	char session_key[16 * 2 + 1];
+	char session_key[32 + 1];
 
 	/* regular expressions for name parsers */
 	char format_localfile[64];

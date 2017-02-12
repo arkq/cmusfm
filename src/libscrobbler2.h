@@ -1,6 +1,6 @@
 /*
  * cmusfm - libscrobbler2.h
- * Copyright (c) 2011-2016 Arkadiusz Bokowy
+ * Copyright (c) 2011-2017 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -48,9 +48,9 @@ typedef struct scrobbler_session_tag {
 	/* 128-bit secret */
 	uint8_t secret[16];
 
-	/* 128-bit session key */
-	uint8_t session_key[16];
 	char user_name[64];
+	/* 32-chars (?) session key */
+	char session_key[32 + 1];
 
 	scrobbler_status_t status;
 	uint8_t errornum;

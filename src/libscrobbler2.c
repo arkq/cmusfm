@@ -35,7 +35,6 @@
 
 
 static char *mem2hex(char *dest, const unsigned char *mem, size_t n);
-static unsigned char *hex2mem(unsigned char *mem, const char *src, size_t n);
 
 
 /* used as a buffer for GET/POST server response */
@@ -199,7 +198,6 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
 	CURL *curl;
 	uint8_t sign[MD5_DIGEST_LENGTH];
 	char api_key_hex[sizeof(sbs->api_key) * 2 + 1];
-	char session_key_hex[sizeof(sbs->session_key) * 2 + 1];
 	char sign_hex[sizeof(sign) * 2 + 1];
 	char post_data[2048];
 	struct sb_response_data response;
@@ -214,7 +212,7 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
 		{"duration", 'd', (void *)(long)sbt->duration},
 		{"mbid", 's', sbt->mbid},
 		{"method", 's', "track.scrobble"},
-		{"sk", 's', session_key_hex},
+		{"sk", 's', sbs->session_key},
 		{"timestamp", 'd', (void *)sbt->timestamp},
 		{"track", 's', sbt->track},
 		{"trackNumber", 'd', (void *)(long)sbt->track_number},
@@ -234,7 +232,6 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
 		return sbs->status = SCROBBLER_STATUS_ERR_CURLINIT;
 
 	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
-	mem2hex(session_key_hex, sbs->session_key, sizeof(sbs->session_key));
 
 	/* make signature for track.scrobble API call */
 	sb_generate_method_signature(sb_data, 11, sbs->secret, sign);
@@ -260,7 +257,6 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 	CURL *curl;
 	uint8_t sign[MD5_DIGEST_LENGTH];
 	char api_key_hex[sizeof(sbs->api_key) * 2 + 1];
-	char session_key_hex[sizeof(sbs->session_key) * 2 + 1];
 	char sign_hex[sizeof(sign) * 2 + 1];
 	char post_data[2048];
 	struct sb_response_data response;
@@ -275,7 +271,7 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 		{"duration", 'd', (void *)(long)sbt->duration},
 		{"mbid", 's', sbt->mbid},
 		{"method", 's', "track.updateNowPlaying"},
-		{"sk", 's', session_key_hex},
+		{"sk", 's', sbs->session_key},
 		{"track", 's', sbt->track},
 		{"trackNumber", 'd', (void *)(long)sbt->track_number},
 		{"api_sig", 's', sign_hex},
@@ -290,7 +286,6 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 		return sbs->status = SCROBBLER_STATUS_ERR_CURLINIT;
 
 	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
-	mem2hex(session_key_hex, sbs->session_key, sizeof(sbs->session_key));
 
 	/* make signature for track.updateNowPlaying API call */
 	sb_generate_method_signature(sb_data, 10, sbs->secret, sign);
@@ -325,15 +320,15 @@ scrobbler_status_t scrobbler_test_session_key(scrobbler_session_t *sbs) {
 	return sb_update_now_playing(sbs, &sbt);
 }
 
-/* Return the session key in the string hex dump. The memory block pointed by
- * the str has to be big enough to contain sizeof(session_key) * 2 + 1. */
+/* Get the session key. The memory block pointed by the str has to be big
+ * enough to contain sizeof(session_key). */
 char *scrobbler_get_session_key_str(scrobbler_session_t *sbs, char *str) {
-	return mem2hex(str, sbs->session_key, sizeof(sbs->session_key));
+	return strncpy(str, sbs->session_key, sizeof(sbs->session_key));
 }
 
-/* Set session key by parsing the hex dump of this key. */
+/* Set the session key. */
 void scrobbler_set_session_key_str(scrobbler_session_t *sbs, const char *str) {
-	hex2mem(sbs->session_key, str, sizeof(sbs->session_key) * 2);
+	strncpy(sbs->session_key, str, sizeof(sbs->session_key));
 }
 
 /* Perform scrobbler service authentication process. */
@@ -411,13 +406,17 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 		return status;
 	}
 
+	/* extract user name from the response */
 	strncpy(sbs->user_name, strstr(response.data, "<name>") + 6,
 			sizeof(sbs->user_name));
-	sbs->user_name[sizeof(sbs->user_name) - 1] = 0;
+	sbs->user_name[sizeof(sbs->user_name) - 1] = '\0';
 	if ((ptr = strchr(sbs->user_name, '<')) != NULL)
 		*ptr = 0;
-	memcpy(get_url, strstr(response.data, "<key>") + 5, 32);
-	hex2mem(sbs->session_key, get_url, sizeof(sbs->session_key) * 2);
+
+	/* extract session key from the response */
+	strncpy(sbs->session_key, strstr(response.data, "<key>") + 5,
+			sizeof(sbs->session_key));
+	sbs->session_key[sizeof(sbs->session_key) - 1] = '\0';
 
 	sb_curl_cleanup(curl, &response);
 	return SCROBBLER_STATUS_OK;
@@ -520,27 +519,4 @@ char *mem2hex(char *dest, const unsigned char *mem, size_t n) {
 	*ptr = '\0';
 
 	return dest;
-}
-
-/* Opposite to the mem2hex. N is the number of characters which should be
- * converted from the hexadecimal representation. Address pointed by the
- * mem should be big enough to contain n / 2 bytes. */
-unsigned char *hex2mem(unsigned char *mem, const char *src, size_t n) {
-
-	size_t i;
-
-	n /= 2;
-	for (i = 0; i < n; i++) {
-		if (isdigit(src[i * 2]))
-			mem[i] = (src[i * 2] - '0') << 4;
-		else
-			mem[i] = (tolower(src[i * 2]) - 'a' + 10) << 4;
-
-		if (isdigit(src[i * 2 + 1]))
-			mem[i] += src[i * 2 + 1] - '0';
-		else
-			mem[i] += tolower(src[i * 2 + 1]) - 'a' + 10;
-	}
-
-	return mem;
 }
