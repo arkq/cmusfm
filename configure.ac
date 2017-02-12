@@ -40,6 +40,7 @@ AC_ARG_ENABLE([libnotify],
 AM_CONDITIONAL([ENABLE_LIBNOTIFY], [test "x$enable_libnotify" = "xyes"])
 AM_COND_IF([ENABLE_LIBNOTIFY], [
 	PKG_CHECK_MODULES([LIBNOTIFY], [libnotify >= 0.7])
+	AC_DEFINE([ENABLE_LIBNOTIFY], [1], [Define to 1 if libnotify is enabled.])
 ])
 
 AC_CONFIG_FILES([Makefile src/Makefile test/Makefile])
