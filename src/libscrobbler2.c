@@ -18,10 +18,6 @@
  * see <http://www.gnu.org/licenses/>.
  */
 
-#if HAVE_CONFIG_H
-#include "../config.h"
-#endif
-
 #include "libscrobbler2.h"
 
 #include <ctype.h>
@@ -84,12 +80,19 @@ static CURL *sb_curl_init(CURLoption method, struct sb_response_data *response) 
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 15);
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 
-#if CURLOPT_PROTOCOLS
-	curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
+#if LIBCURL_VERSION_NUM >= 0x071101 /* 7.17.1 */
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+	curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5);
+	curl_easy_setopt(curl, CURLOPT_POSTREDIR, CURL_REDIR_POST_ALL);
 #endif
-	curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+
+#if LIBCURL_VERSION_NUM >= 0x071304 /* 7.19.4 */
+	curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+	curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+#endif
 
 	curl_easy_setopt(curl, method, 1);
+	curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
 	memset(response, 0, sizeof(*response));
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
@@ -113,6 +116,12 @@ static scrobbler_status_t sb_check_response(struct sb_response_data *response,
 	/* network transfer failure (curl error) */
 	if (curl_status != 0) {
 		sbs->errornum = curl_status;
+		return sbs->status = SCROBBLER_STATUS_ERR_CURLPERF;
+	}
+
+	/* curl write callback was not called, something was mighty wrong... */
+	if (response->data == NULL) {
+		sbs->errornum = CURLE_GOT_NOTHING;
 		return sbs->status = SCROBBLER_STATUS_ERR_CURLPERF;
 	}
 
@@ -240,7 +249,7 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
 	/* make track.scrobble POST request */
 	sb_make_curl_getpost_string(curl, post_data, sb_data, 12);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
-	curl_easy_setopt(curl, CURLOPT_URL, SCROBBLER_URL);
+	curl_easy_setopt(curl, CURLOPT_URL, sbs->api_url);
 
 	sb_check_response(&response, curl_easy_perform(curl), sbs);
 	debug("scrobble status: %d", sbs->status);
@@ -294,7 +303,7 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 	/* make track.updateNowPlaying POST request */
 	sb_make_curl_getpost_string(curl, post_data, sb_data, 11);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
-	curl_easy_setopt(curl, CURLOPT_URL, SCROBBLER_URL);
+	curl_easy_setopt(curl, CURLOPT_URL, sbs->api_url);
 
 	sb_check_response(&response, curl_easy_perform(curl), sbs);
 	debug("now playing status: %d", sbs->status);
@@ -320,14 +329,13 @@ scrobbler_status_t scrobbler_test_session_key(scrobbler_session_t *sbs) {
 	return sb_update_now_playing(sbs, &sbt);
 }
 
-/* Get the session key. The memory block pointed by the str has to be big
- * enough to contain sizeof(session_key). */
-char *scrobbler_get_session_key_str(scrobbler_session_t *sbs, char *str) {
-	return strncpy(str, sbs->session_key, sizeof(sbs->session_key));
+/* Get the session key. */
+const char *scrobbler_get_session_key(scrobbler_session_t *sbs) {
+	return sbs->session_key;
 }
 
 /* Set the session key. */
-void scrobbler_set_session_key_str(scrobbler_session_t *sbs, const char *str) {
+void scrobbler_set_session_key(scrobbler_session_t *sbs, const char *str) {
 	strncpy(sbs->session_key, str, sizeof(sbs->session_key));
 }
 
@@ -366,7 +374,7 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* make auth.getToken GET request */
-	strcpy(get_url, SCROBBLER_URL "?");
+	sprintf(get_url, "%s?", sbs->api_url);
 	sb_make_curl_getpost_string(curl, get_url + strlen(get_url), sb_data_token, 3);
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 
@@ -380,8 +388,8 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	token_hex[32] = 0;
 
 	/* perform user authorization (callback function) */
-	sprintf(get_url, SCROBBLER_USERAUTH_URL "?api_key=%s&token=%s",
-			api_key_hex, token_hex);
+	sprintf(get_url, "%s?api_key=%s&token=%s",
+			sbs->auth_url, api_key_hex, token_hex);
 	if (callback(get_url) != 0) {
 		sb_curl_cleanup(curl, &response);
 		return sbs->status = SCROBBLER_STATUS_ERR_CALLBACK;
@@ -395,7 +403,7 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	response.size = 0;
 
 	/* make auth.getSession GET request */
-	strcpy(get_url, SCROBBLER_URL "?");
+	sprintf(get_url, "%s?", sbs->api_url);
 	sb_make_curl_getpost_string(curl, get_url + strlen(get_url), sb_data_session, 4);
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 
@@ -425,8 +433,8 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 /* Initialize scrobbler session. On success this function returns pointer
  * to allocated scrobbler_session structure, which must be freed by call
  * to scrobbler_free. On error NULL is returned. */
-scrobbler_session_t *scrobbler_initialize(uint8_t api_key[16],
-		uint8_t secret[16]) {
+scrobbler_session_t *scrobbler_initialize(const char *api_url,
+		const char *auth_url, uint8_t api_key[16], uint8_t secret[16]) {
 
 	scrobbler_session_t *sbs;
 
@@ -434,11 +442,13 @@ scrobbler_session_t *scrobbler_initialize(uint8_t api_key[16],
 	if ((sbs = calloc(1, sizeof(scrobbler_session_t))) == NULL)
 		return NULL;
 
-	if (curl_global_init(CURL_GLOBAL_NOTHING) != 0) {
+	if (curl_global_init(CURL_GLOBAL_DEFAULT) != 0) {
 		free(sbs);
 		return NULL;
 	}
 
+	strncpy(sbs->api_url, api_url, sizeof(sbs->api_url) - 1);
+	strncpy(sbs->auth_url, auth_url, sizeof(sbs->auth_url) - 1);
 	memcpy(sbs->api_key, api_key, sizeof(sbs->api_key));
 	memcpy(sbs->secret, secret, sizeof(sbs->secret));
 

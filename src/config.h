@@ -22,11 +22,13 @@
 #define CMUSFM_CONFIG_H_
 
 #if HAVE_CONFIG_H
-#include "../config.h"
+# include "../config.h"
 #endif
 
+#include <stdbool.h>
 
-/* Configuration file key definitions */
+
+/* Configuration file setting keys. */
 #define CMCONF_USER_NAME "user"
 #define CMCONF_SESSION_KEY "key"
 #define CMCONF_FORMAT_LOCALFILE "format-localfile"
@@ -37,9 +39,16 @@
 #define CMCONF_SUBMIT_LOCALFILE "submit-localfile"
 #define CMCONF_SUBMIT_SHOUTCAST "submit-shoutcast"
 #define CMCONF_NOTIFICATION "notification"
+#define CMCONF_SERVICE_API_URL "service-api-url"
+#define CMCONF_SERVICE_AUTH_URL "service-auth-url"
 
 
 struct cmusfm_config {
+
+	/* service API endpoints */
+	char service_api_url[64];
+	char service_auth_url[64];
+
 	char user_name[64];
 	char session_key[32 + 1];
 
@@ -50,13 +59,14 @@ struct cmusfm_config {
 	char format_coverfile[64];
 #endif
 
-	unsigned int nowplaying_localfile : 1;
-	unsigned int nowplaying_shoutcast : 1;
-	unsigned int submit_localfile : 1;
-	unsigned int submit_shoutcast : 1;
+	bool nowplaying_localfile : 1;
+	bool nowplaying_shoutcast : 1;
+	bool submit_localfile : 1;
+	bool submit_shoutcast : 1;
 #if ENABLE_LIBNOTIFY
-	unsigned int notification : 1;
+	bool notification : 1;
 #endif
+
 };
 
 

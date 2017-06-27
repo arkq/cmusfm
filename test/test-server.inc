@@ -48,7 +48,8 @@ int cmusfm_config_read(const char *fname, struct cmusfm_config *conf) { return 0
 int cmusfm_config_add_watch(int fd) { return 0; }
 void cmusfm_notify_initialize() {}
 void cmusfm_notify_free() {}
-scrobbler_session_t *scrobbler_initialize(uint8_t api_key[16], uint8_t secret[16]) { return NULL; }
+scrobbler_session_t *scrobbler_initialize(const char *api_url, const char *auth_url,
+	uint8_t api_key[16], uint8_t secret[16]) { return NULL; }
 void scrobbler_free(scrobbler_session_t *sbs) {}
-void scrobbler_set_session_key_str(scrobbler_session_t *sbs, const char *str) {}
+void scrobbler_set_session_key(scrobbler_session_t *sbs, const char *str) {}
 scrobbler_status_t scrobbler_test_session_key(scrobbler_session_t *sbs) { return 0; }

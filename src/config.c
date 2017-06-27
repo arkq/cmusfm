@@ -1,6 +1,6 @@
 /*
  * cmusfm - config.c
- * Copyright (c) 2014-2015 Arkadiusz Bokowy
+ * Copyright (c) 2014-2017 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -17,10 +17,6 @@
  * If you want to read full version of the GNU General Public License
  * see <http://www.gnu.org/licenses/>.
  */
-
-#if HAVE_CONFIG_H
-#include "../config.h"
-#endif
 
 #include "config.h"
 
@@ -43,7 +39,10 @@ static char *get_config_value(char *str) {
 	char *end;
 
 	/* seek to the beginning of a value */
-	str = strchr(str, '=') + 1;
+	if ((str = strchr(str, '=')) == NULL)
+		return "";
+
+	str += 1;
 
 	/* trim leading spaces and optional quotation */
 	while (isspace(*str)) str++;
@@ -78,6 +77,8 @@ int cmusfm_config_read(const char *fname, struct cmusfm_config *conf) {
 
 	/* initialize configuration defaults */
 	memset(conf, 0, sizeof(*conf));
+	strcpy(conf->service_api_url, "https://ws.audioscrobbler.com/2.0/");
+	strcpy(conf->service_auth_url, "https://www.last.fm/api/auth");
 	strcpy(conf->format_localfile, "^(?A.+) - (?T.+)\\.[^.]+$");
 	strcpy(conf->format_shoutcast, "^(?A.+) - (?T.+)$");
 #if ENABLE_LIBNOTIFY
@@ -116,6 +117,10 @@ int cmusfm_config_read(const char *fname, struct cmusfm_config *conf) {
 		else if (strncmp(line, CMCONF_NOTIFICATION, sizeof(CMCONF_NOTIFICATION) - 1) == 0)
 			conf->notification = decode_config_bool(get_config_value(line));
 #endif
+		else if (strncmp(line, CMCONF_SERVICE_API_URL, sizeof(CMCONF_SERVICE_API_URL) - 1) == 0)
+			strncpy(conf->service_api_url, get_config_value(line), sizeof(conf->service_api_url) - 1);
+		else if (strncmp(line, CMCONF_SERVICE_AUTH_URL, sizeof(CMCONF_SERVICE_AUTH_URL) - 1) == 0)
+			strncpy(conf->service_auth_url, get_config_value(line), sizeof(conf->service_auth_url) - 1);
 	}
 
 	return fclose(f);
@@ -152,6 +157,10 @@ int cmusfm_config_write(const char *fname, struct cmusfm_config *conf) {
 #if ENABLE_LIBNOTIFY
 	fprintf(f, "%s = \"%s\"\n", CMCONF_NOTIFICATION, encode_config_bool(conf->notification));
 #endif
+
+	fprintf(f, "\n# scrobbling service\n");
+	fprintf(f, "%s = \"%s\"\n", CMCONF_SERVICE_API_URL, conf->service_api_url);
+	fprintf(f, "%s = \"%s\"\n", CMCONF_SERVICE_AUTH_URL, conf->service_auth_url);
 
 	return fclose(f);
 }

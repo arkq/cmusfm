@@ -1,6 +1,6 @@
 /*
  * cmusfm - server.c
- * Copyright (c) 2010-2015 Arkadiusz Bokowy
+ * Copyright (c) 2010-2017 Arkadiusz Bokowy
  *
  * This file is a part of a cmusfm.
  *
@@ -309,8 +309,9 @@ int cmusfm_server_start(void) {
 		return -1;
 
 	/* initialize scrobbling library */
-	sbs = scrobbler_initialize(SC_api_key, SC_secret);
-	scrobbler_set_session_key_str(sbs, config.session_key);
+	sbs = scrobbler_initialize(config.service_api_url,
+			config.service_auth_url, SC_api_key, SC_secret);
+	scrobbler_set_session_key(sbs, config.session_key);
 
 	/* catch signals which are used to quit server */
 	struct sigaction sigact = { .sa_handler = cmusfm_server_stop };

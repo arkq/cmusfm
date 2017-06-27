@@ -113,20 +113,27 @@ static void cmusfm_initialization(void) {
 
 	scrobbler_session_t *sbs;
 	struct cmusfm_config conf;
-	int fetch_session_key;
+	bool check_prev_session;
+	bool fetch_new_session;
 	char yesno[8], *ptr;
 
-	fetch_session_key = 1;
-	sbs = scrobbler_initialize(SC_api_key, SC_secret);
+	fetch_new_session = true;
+	check_prev_session = false;
 
 	/* try to make sure that the configuration directory exists */
 	mkdirp(get_cmus_home_dir(), S_IRWXU);
 
 	/* try to read previous configuration */
-	if (cmusfm_config_read(cmusfm_config_file, &conf) == 0) {
+	if (cmusfm_config_read(cmusfm_config_file, &conf) == 0)
+		check_prev_session = true;
+
+	sbs = scrobbler_initialize(conf.service_api_url,
+			conf.service_auth_url, SC_api_key, SC_secret);
+
+	if (check_prev_session) {
 		printf("Checking previous session (user: %s) ...", conf.user_name);
 		fflush(stdout);
-		scrobbler_set_session_key_str(sbs, conf.session_key);
+		scrobbler_set_session_key(sbs, conf.session_key);
 		if (scrobbler_test_session_key(sbs) == 0)
 			printf("OK.\n");
 		else
@@ -135,13 +142,13 @@ static void cmusfm_initialization(void) {
 		printf("Fetch new session key [yes/NO]: ");
 		ptr = fgets(yesno, sizeof(yesno), stdin);
 		if (ptr != NULL && strncmp(ptr, "yes", 3) != 0)
-			fetch_session_key = 0;
+			fetch_new_session = false;
 	}
 
-	if (fetch_session_key) {  /* fetch new session key */
+	if (fetch_new_session) {
 		if (scrobbler_authentication(sbs, user_authorization) == 0) {
-			scrobbler_get_session_key_str(sbs, conf.session_key);
 			strncpy(conf.user_name, sbs->user_name, sizeof(conf.user_name) - 1);
+			strncpy(conf.session_key, sbs->session_key, sizeof(conf.session_key) - 1);
 		}
 		else
 			printf("Error: %s\n", scrobbler_strerror(sbs));
