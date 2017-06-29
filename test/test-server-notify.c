@@ -1,3 +1,11 @@
+/*
+ * test-server-notify.c
+ * Copyright (c) 2015-2017 Arkadiusz Bokowy
+ *
+ * This file is a part of cmusfm.
+ *
+ */
+
 #include <assert.h>
 
 #define DEBUG_SKIP_HICCUP
@@ -17,8 +25,8 @@ int main(void) {
 	strcpy(((char *)(track + 1)) + 40, "Yellow Submarine");
 	strcpy(((char *)(track + 1)) + 60, "");
 
-	config.nowplaying_localfile = 1;
-	config.nowplaying_shoutcast = 1;
+	config.nowplaying_localfile = true;
+	config.nowplaying_shoutcast = true;
 
 	track->status = CMSTATUS_PLAYING;
 	cmusfm_server_update_record_checksum(track);
@@ -28,13 +36,13 @@ int main(void) {
 	assert(strcmp(scrobbler_update_now_playing_sbt.artist, "The Beatles") == 0);
 	assert(strcmp(scrobbler_update_now_playing_sbt.track, "Yellow Submarine") == 0);
 
-	config.nowplaying_localfile = 0;
+	config.nowplaying_localfile = false;
 
 	cmusfm_server_process_data(NULL, track);
 	assert(scrobbler_update_now_playing_count == 1);
 
 #if ENABLE_LIBNOTIFY
-	config.notification = 1;
+	config.notification = true;
 #endif
 
 	track->status |= CMSTATUS_SHOUTCASTMASK;
@@ -48,7 +56,7 @@ int main(void) {
 
 	/* reshow now playing notification after a long pause */
 
-	config.nowplaying_localfile = 1;
+	config.nowplaying_localfile = true;
 
 	track->status = CMSTATUS_PLAYING;
 	cmusfm_server_update_record_checksum(track);

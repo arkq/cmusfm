@@ -1,8 +1,8 @@
 /*
- * cmusfm - server.c
+ * server.c
  * Copyright (c) 2010-2017 Arkadiusz Bokowy
  *
- * This file is a part of a cmusfm.
+ * This file is a part of cmusfm.
  *
  * cmusfm is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
  */
 
 #if HAVE_CONFIG_H
-#include "../config.h"
+# include "../config.h"
 #endif
 
 #include "server.h"
@@ -35,7 +35,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #if HAVE_SYS_INOTIFY_H
-#include <sys/inotify.h>
+# include <sys/inotify.h>
 #endif
 
 #include "cache.h"
@@ -43,7 +43,7 @@
 #include "config.h"
 #include "debug.h"
 #if ENABLE_LIBNOTIFY
-#include "notify.h"
+# include "notify.h"
 #endif
 
 
@@ -274,11 +274,11 @@ int cmusfm_server_check(void) {
 }
 
 /* server shutdown stuff */
-static int server_on = 1;
+static bool server_on = true;
 static void cmusfm_server_stop(int sig) {
 	(void)sig;
 	debug("stopping server");
-	server_on = 0;
+	server_on = false;
 }
 
 /* Start server instance. This function hangs until server is stopped.

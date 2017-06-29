@@ -1,3 +1,13 @@
+/*
+ * test-server.inc
+ * vim: ft=c
+ *
+ * Copyright (c) 2015-2017 Arkadiusz Bokowy
+ *
+ * This file is a part of cmusfm.
+ *
+ */
+
 #include "../src/cmusfm.h"
 #include "../src/server.c"
 #include "../src/utils.c"

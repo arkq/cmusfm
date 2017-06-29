@@ -1,8 +1,8 @@
 /*
- * cmusfm - notify.c
- * Copyright (c) 2014-2016 Arkadiusz Bokowy
+ * notify.c
+ * Copyright (c) 2014-2017 Arkadiusz Bokowy
  *
- * This file is a part of a cmusfm.
+ * This file is a part of cmusfm.
  *
  * cmusfm is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

@@ -1,3 +1,11 @@
+/*
+ * test-server-submit01.c
+ * Copyright (c) 2015-2017 Arkadiusz Bokowy
+ *
+ * This file is a part of cmusfm.
+ *
+ */
+
 #include <assert.h>
 
 #define DEBUG_SKIP_HICCUP
@@ -16,8 +24,8 @@ int main(void) {
 	strcpy(((char *)(track + 1)) + 40, "Yellow Submarine");
 	strcpy(((char *)(track + 1)) + 60, "");
 
-	config.submit_localfile = 1;
-	config.submit_shoutcast = 1;
+	config.submit_localfile = true;
+	config.submit_shoutcast = true;
 
 	track->status = CMSTATUS_PLAYING;
 	track->duration = 35;

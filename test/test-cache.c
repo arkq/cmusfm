@@ -1,3 +1,11 @@
+/*
+ * test-cache.c
+ * Copyright (c) 2015-2017 Arkadiusz Bokowy
+ *
+ * This file is a part of cmusfm.
+ *
+ */
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +19,8 @@ const char *cmusfm_cache_file;
 /* library function used by the cache code */
 int scrobbler_scrobble_count = 0;
 scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt) {
+	(void)sbs;
+	(void)sbt;
 	scrobbler_scrobble_count++;
 	return SCROBBLER_STATUS_OK;
 }
@@ -50,7 +60,7 @@ int main(void) {
 	assert((f = fopen(cmusfm_cache_file, "r")) != NULL);
 	/* make sure the structure of the cache file is not changed */
 	assert((size = fread(buffer, 1, sizeof(buffer), f)) == 107);
-	assert(make_data_hash(buffer, size) == 371117);
+	assert(make_data_hash((unsigned char *)buffer, size) == 371117);
 	fclose(f);
 
 	cmusfm_cache_submit(NULL);

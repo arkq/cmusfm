@@ -52,6 +52,15 @@ displayed. Exemplary configuration might be as follows:
 * `notification = "yes"`
 * `format-coverfile = "^(cover|folder)\.jpg$"`
 
+By default cmusfm scrobbles to the Last.fm service. However, it is possible to change this
+behavior by modifying `service-api-url` and `service-auth-url` options in the configuration file.
+Afterwards, one should reinitialize cmusfm (`cmusfm init`) in order to authenticate with new
+scrobbling service. In order to use [Libre.fm](https://libre.fm/) as a scrobbling service, one
+shall use configuration as follows:
+
+* `service-api-url = "https://libre.fm/2.0/"`
+* `service-auth-url = "https://libre.fm/api/auth"`
+
 
 Installation
 ------------
@@ -72,15 +81,6 @@ action might be also required when upgrading to the newer version with new featu
 	$ cmusfm init
 
 After that you can safely edit `~/.config/cmus/cmusfm.conf` configuration file.
-
-By default cmusfm scrobbles to the Last.fm service. However, it is possible to change this
-behavior by modifying `service-api-url` and `service-auth-url` options in the configuration file.
-Afterwards, one should reinitialize cmusfm (`cmusfm init`) in order to authenticate with new
-scrobbling service. In order to use [Libre.fm](https://libre.fm/) as a scrobbling service, one
-shall use configuration as follows:
-
-* `service-api-url = "https://libre.fm/2.0/"`
-* `service-auth-url = "https://libre.fm/api/auth"`
 
 ~~Note, that for some changes to take place, restart of the cmusfm server process is required. To
 achieved this, one has to quit cmus player and then kill background instance of cmusfm (e.g.

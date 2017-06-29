@@ -1,8 +1,8 @@
 /*
- * cmusfm - main.c
- * Copyright (c) 2010-2016 Arkadiusz Bokowy
+ * main.c
+ * Copyright (c) 2010-2017 Arkadiusz Bokowy
  *
- * This file is a part of a cmusfm.
+ * This file is a part of cmusfm.
  *
  * cmusfm is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
  */
 
 #if HAVE_CONFIG_H
-#include "../config.h"
+# include "../config.h"
 #endif
 
 #include "cmusfm.h"

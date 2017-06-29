@@ -1,8 +1,8 @@
 /*
- * cmusfm - config.c
+ * config.c
  * Copyright (c) 2014-2017 Arkadiusz Bokowy
  *
- * This file is a part of a cmusfm.
+ * This file is a part of cmusfm.
  *
  * cmusfm is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #if HAVE_SYS_INOTIFY_H
-#include <sys/inotify.h>
+# include <sys/inotify.h>
 #endif
 
 #include "cmusfm.h"
@@ -61,11 +61,11 @@ static char *get_config_value(char *str) {
 	return str;
 }
 
-static char *encode_config_bool(int value) {
+static char *encode_config_bool(bool value) {
 	return value ? "yes" : "no";
 }
 
-static int decode_config_bool(const char *value) {
+static bool decode_config_bool(const char *value) {
 	return strcmp(value, "yes") == 0;
 }
 
@@ -86,10 +86,10 @@ int cmusfm_config_read(const char *fname, struct cmusfm_config *conf) {
 	 * sailors from the pirate bay */
 	strcpy(conf->format_coverfile, "^folder\\.jpg$");
 #endif
-	conf->nowplaying_localfile = 1;
-	conf->nowplaying_shoutcast = 1;
-	conf->submit_localfile = 1;
-	conf->submit_shoutcast = 1;
+	conf->nowplaying_localfile = true;
+	conf->nowplaying_shoutcast = true;
+	conf->submit_localfile = true;
+	conf->submit_shoutcast = true;
 
 	if ((f = fopen(fname, "r")) == NULL)
 		return -1;
