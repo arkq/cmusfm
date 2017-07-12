@@ -13,7 +13,7 @@ AM_PROG_CC_C_O
 
 # testing presence of pkg-config
 AC_MSG_CHECKING([pkg-config m4 macros])
-if test m4_ifdef([PKG_CHECK_MODULES], [yes], [no]) == yes; then
+if test m4_ifdef([PKG_CHECK_MODULES], [yes], [no]) = "yes"; then
 	AC_MSG_RESULT([yes]);
 else
 	AC_MSG_RESULT([no]);
