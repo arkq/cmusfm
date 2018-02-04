@@ -1,6 +1,6 @@
 /*
  * libscrobbler2.c
- * Copyright (c) 2011-2017 Arkadiusz Bokowy
+ * Copyright (c) 2011-2018 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -54,7 +54,7 @@ static size_t sb_curl_write_callback(char *ptr, size_t size, size_t nmemb,
 	struct sb_response_data *rd = (struct sb_response_data *)data;
 	size *= nmemb;
 
-	debug("read: size: %zu, body: %s", size, ptr);
+	debug("Read: size: %zu, body: %s", size, ptr);
 
 	/* XXX: Passing a zero bytes data to this callback is not en error,
 	 *      however memory allocation fail is. */
@@ -111,7 +111,7 @@ static void sb_curl_cleanup(CURL *curl, struct sb_response_data *response) {
 static scrobbler_status_t sb_check_response(struct sb_response_data *response,
 		int curl_status, scrobbler_session_t *sbs) {
 
-	debug("check: status: %d, body: %s", curl_status, response->data);
+	debug("Check: status: %d, body: %s", curl_status, response->data);
 
 	/* network transfer failure (curl error) */
 	if (curl_status != 0) {
@@ -160,7 +160,7 @@ static void sb_generate_method_signature(struct sb_getpost_data *sb_data,
 		offset += sprintf(tmp_str + offset, format, sb_data[x].name, sb_data[x].data);
 	}
 
-	debug("signature data: %s", tmp_str);
+	debug("Signature data: %s", tmp_str);
 	strcat(tmp_str, secret_hex);
 	MD5((unsigned char *)tmp_str, strlen(tmp_str), sign);
 }
@@ -195,7 +195,7 @@ static char *sb_make_curl_getpost_string(CURL *curl, char *str_buffer,
 
 	/* strip '&' from the end of the string */
 	str_buffer[offset - 1] = 0;
-	debug("params: %s", str_buffer);
+	debug("Params: %s", str_buffer);
 
 	return str_buffer;
 }
@@ -229,8 +229,8 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
 		{"api_sig", 's', sign_hex},
 	};
 
-	debug("scrobble: %ld", sbt->timestamp);
-	debug("payload: %s - %s (%s) - %d. %s (%ds)",
+	debug("Scrobble: %ld", sbt->timestamp);
+	debug("Payload: %s - %s (%s) - %d. %s (%ds)",
 			sbt->artist, sbt->album, sbt->album_artist,
 			sbt->track_number, sbt->track, sbt->duration);
 
@@ -252,7 +252,7 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
 	curl_easy_setopt(curl, CURLOPT_URL, sbs->api_url);
 
 	sb_check_response(&response, curl_easy_perform(curl), sbs);
-	debug("scrobble status: %d", sbs->status);
+	debug("Scrobble status: %d", sbs->status);
 
 	sb_curl_cleanup(curl, &response);
 	return sbs->status;
@@ -286,8 +286,8 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 		{"api_sig", 's', sign_hex},
 	};
 
-	debug("now playing: %ld", sbt->timestamp);
-	debug("payload: %s - %s (%s) - %d. %s (%ds)",
+	debug("Now playing: %ld", sbt->timestamp);
+	debug("Payload: %s - %s (%s) - %d. %s (%ds)",
 			sbt->artist, sbt->album, sbt->album_artist,
 			sbt->track_number, sbt->track, sbt->duration);
 
@@ -306,7 +306,7 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 	curl_easy_setopt(curl, CURLOPT_URL, sbs->api_url);
 
 	sb_check_response(&response, curl_easy_perform(curl), sbs);
-	debug("now playing status: %d", sbs->status);
+	debug("Now playing status: %d", sbs->status);
 
 	sb_curl_cleanup(curl, &response);
 	return sbs->status;
@@ -315,7 +315,7 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 /* Update "Now playing" notification. */
 scrobbler_status_t scrobbler_update_now_playing(scrobbler_session_t *sbs,
 		scrobbler_trackinfo_t *sbt) {
-	debug("now playing wrapper");
+	debug("Now playing wrapper");
 	if (sbt->artist == NULL || sbt->track == NULL)
 		return sbs->status = SCROBBLER_STATUS_ERR_TRACKINF;
 	return sb_update_now_playing(sbs, sbt);
@@ -324,7 +324,7 @@ scrobbler_status_t scrobbler_update_now_playing(scrobbler_session_t *sbs,
 /* Hard-codded method for validating session key. This approach uses the
  * updateNotify method call with invalid parameters as a test call. */
 scrobbler_status_t scrobbler_test_session_key(scrobbler_session_t *sbs) {
-	debug("session validation wrapper");
+	debug("Session validation wrapper");
 	scrobbler_trackinfo_t sbt = { .artist = "", .track = "" };
 	return sb_update_now_playing(sbs, &sbt);
 }
@@ -408,7 +408,7 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 
 	status = sb_check_response(&response, curl_easy_perform(curl), sbs);
-	debug("authentication status: %d", sbs->status);
+	debug("Authentication status: %d", sbs->status);
 	if (status != SCROBBLER_STATUS_OK) {
 		sb_curl_cleanup(curl, &response);
 		return status;

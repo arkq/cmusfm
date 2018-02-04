@@ -1,6 +1,6 @@
 /*
  * utils.c
- * Copyright (c) 2014-2017 Arkadiusz Bokowy
+ * Copyright (c) 2014-2018 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -123,7 +123,7 @@ char *get_album_cover_file(const char *location, const char *format) {
 	regex_t regex;
 	char *tmp;
 
-	debug("get cover (case-insensitive): %s", format);
+	debug("Get cover (case-insensitive): %s", format);
 
 	if (location == NULL)
 		return NULL;
@@ -148,7 +148,7 @@ char *get_album_cover_file(const char *location, const char *format) {
 
 	/* scan given directory for cover file name pattern */
 	while ((dp = readdir(dir)) != NULL) {
-		debug("cover lookup: %s", dp->d_name);
+		debug("Cover lookup: %s", dp->d_name);
 		if (!regexec(&regex, dp->d_name, 0, NULL, 0)) {
 			strcat(strcat(fname, "/"), dp->d_name);
 			break;
@@ -161,7 +161,7 @@ char *get_album_cover_file(const char *location, const char *format) {
 	if (dp == NULL)
 		return NULL;
 
-	debug("cover: %s", fname);
+	debug("Cover: %s", fname);
 	return fname;
 }
 #endif
@@ -185,7 +185,7 @@ struct format_match *get_regexp_format_matches(const char *str, const char *form
 	regex_t regex;
 	regmatch_t regmatch[MATCHES_SIZE];
 
-	debug("matching: %s: %s", format, str);
+	debug("Matching: %s: %s", format, str);
 
 	/* allocate memory for up to FORMAT_MATCH_TYPE_COUNT matches
 	 * with one extra always empty terminating structure */
@@ -198,7 +198,7 @@ struct format_match *get_regexp_format_matches(const char *str, const char *form
 		strcpy(&regexp[p - format - i * 2], p);
 	}
 
-	debug("regexp: %s", regexp);
+	debug("Regexp: %s", regexp);
 
 	status = regcomp(&regex, regexp, REG_EXTENDED | REG_ICASE);
 	free(regexp);

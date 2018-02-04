@@ -1,6 +1,6 @@
 /*
  * server.c
- * Copyright (c) 2010-2017 Arkadiusz Bokowy
+ * Copyright (c) 2010-2018 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -24,6 +24,7 @@
 
 #include "server.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <poll.h>
@@ -114,15 +115,15 @@ static void cmusfm_server_process_data(scrobbler_session_t *sbs,
 			(checksum2 = make_record_checksum2(record)) != record->checksum2)
 		return;
 
-	debug("payload: %s - %s - %d. %s (%ds)",
+	debug("Payload: %s - %s - %d. %s (%ds)",
 			get_record_artist(record), get_record_album(record),
 			record->track_number, get_record_track(record),
 			record->duration);
-	debug("location: %s", get_record_location(record));
+	debug("Location: %s", get_record_location(record));
 
 #if DEBUG && !defined(DEBUG_SKIP_HICCUP)
 	/* simulate server "hiccup" (e.g. internet connection issue) */
-	debug("server hiccup test (5s)");
+	debug("Server hiccup test (5s)");
 	sleep(5);
 #endif
 
@@ -163,7 +164,7 @@ action_submit:
 			if ((saved_is_radio && !config.submit_shoutcast) ||
 					(!saved_is_radio && !config.submit_localfile)) {
 				/* skip submission if we don't want it */
-				debug("submission not enabled");
+				debug("Submission not enabled");
 				goto action_submit_skip;
 			}
 
@@ -205,7 +206,7 @@ action_nowplaying:
 					cmusfm_notify_show(&sb_tinf, get_album_cover_file(
 								get_record_location(record), config.format_coverfile));
 				else
-					debug("notification not enabled");
+					debug("Notification not enabled");
 #endif
 
 				/* update now-playing indicator */
@@ -216,7 +217,7 @@ action_nowplaying:
 							scrobbler_fail_time = 1;
 					}
 					else
-						debug("now playing not enabled");
+						debug("Now playing not enabled");
 				}
 
 			}
@@ -277,7 +278,7 @@ int cmusfm_server_check(void) {
 static bool server_on = true;
 static void cmusfm_server_stop(int sig) {
 	(void)sig;
-	debug("stopping server");
+	debug("Stopping server");
 	server_on = false;
 }
 
@@ -293,7 +294,7 @@ int cmusfm_server_start(void) {
 	size_t rd_len;
 	int retval;
 
-	debug("starting server");
+	debug("Starting server");
 
 	/* setup poll structure for data reading */
 	struct pollfd pfds[3] = {
@@ -332,7 +333,7 @@ int cmusfm_server_start(void) {
 	cmusfm_config_add_watch(pfds[2].fd);
 #endif
 
-	debug("entering server main loop");
+	debug("Entering server main loop");
 	while (server_on) {
 
 		if (poll(pfds, 3, -1) == -1)
@@ -340,7 +341,7 @@ int cmusfm_server_start(void) {
 
 		if (pfds[0].revents & POLLIN) {
 			pfds[1].fd = accept(pfds[0].fd, NULL, NULL);
-			debug("new client accepted: %d", pfds[1].fd);
+			debug("New client accepted: %d", pfds[1].fd);
 		}
 
 		if (pfds[1].revents & POLLIN && pfds[1].fd != -1) {
@@ -356,7 +357,7 @@ int cmusfm_server_start(void) {
 			/* We're watching only one file, so the result is of no importance
 			 * to us, simply read out the inotify file descriptor. */
 			read(pfds[2].fd, &inot_even, sizeof(inot_even));
-			debug("inotify event occurred: %x", inot_even.mask);
+			debug("Inotify event occurred: %x", inot_even.mask);
 			cmusfm_config_read(cmusfm_config_file, &config);
 			cmusfm_config_add_watch(pfds[2].fd);
 		}
@@ -390,7 +391,7 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	char buffer[CMSOCKET_BUFFER_SIZE];
 	struct cmusfm_data_record *record = (struct cmusfm_data_record *)buffer;
 	struct format_match *match, *matches;
-	int sock;
+	int err, sock;
 
 	/* helper accessors for dynamic fields */
 	char *artist = &buffer[sizeof(*record)];
@@ -398,7 +399,7 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	char *title = &buffer[sizeof(*record)];
 	char *location = &buffer[sizeof(*record)];
 
-	debug("sending track to server");
+	debug("Sending track to server");
 
 	memset(buffer, 0, sizeof(buffer));
 
@@ -414,15 +415,15 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
 	if ((tinfo->url != NULL && tinfo->artist == NULL && tinfo->title != NULL) ||
 			(tinfo->file != NULL && tinfo->artist == NULL && tinfo->title == NULL)) {
-		debug("regular expression matching mode");
+		debug("Regular expression matching mode");
 
 		if (tinfo->url != NULL) {
 			/* URL: try to fetch artist and track tile form the 'title' field */
 
 			matches = get_regexp_format_matches(tinfo->title, config.format_shoutcast);
 			if (matches == NULL) {
-				fprintf(stderr, "error: shoutcast format match failed\n");
-				return -1;
+				fprintf(stderr, "INFO: Title does not match format-shoutcast\n");
+				return 0;
 			}
 		}
 		else {
@@ -431,8 +432,8 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 			tinfo->file = basename(tinfo->file);
 			matches = get_regexp_format_matches(tinfo->file, config.format_localfile);
 			if (matches == NULL) {
-				fprintf(stderr, "error: localfile format match failed\n");
-				return -1;
+				fprintf(stderr, "INFO: File name does not match format-localfile\n");
+				return 0;
 			}
 		}
 
@@ -477,18 +478,24 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	/* connect to the communication socket */
 	struct sockaddr_un saddr = { .sun_family = AF_UNIX };
 	strcpy(saddr.sun_path, cmusfm_socket_file);
-	sock = socket(PF_UNIX, SOCK_STREAM, 0);
-	if (connect(sock, (struct sockaddr *)(&saddr), sizeof(saddr)) == -1) {
-		close(sock);
-		return -1;
-	}
+	if ((sock = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
+		goto fail;
+	if (connect(sock, (struct sockaddr *)(&saddr), sizeof(saddr)) == -1)
+		goto fail;
 
-	debug("record length: %ld", sizeof(struct cmusfm_data_record) +
-			record->off_title + record->off_location + strlen(location) + 1);
-	write(sock, buffer, sizeof(struct cmusfm_data_record) +
-			record->off_title + record->off_location + strlen(location) + 1);
+	ssize_t len = sizeof(struct cmusfm_data_record) +
+		record->off_title + record->off_location + strlen(location) + 1;
+	debug("Record length: %zd", len);
+	if (write(sock, buffer, len) != len)
+		goto fail;
 
 	return close(sock);
+
+fail:
+	err = errno;
+	close(sock);
+	errno = err;
+	return -1;
 }
 
 /* Helper function for retrieving server socket file. */

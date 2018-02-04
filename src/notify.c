@@ -1,6 +1,6 @@
 /*
  * notify.c
- * Copyright (c) 2014-2017 Arkadiusz Bokowy
+ * Copyright (c) 2014-2018 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -58,7 +58,7 @@ void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon) 
 
 	cmus_notify = notify_notification_new(sb_tinf->track, body, icon);
 	if (!notify_notification_show(cmus_notify, &error)) {
-		debug("desktop notify error: %s", error->message);
+		debug("Desktop notify error: %s", error->message);
 		g_error_free(error);
 		/* NOTE: Free the notification subsystem upon show failure. This action
 		 *       allows us to recover from the D-Bus connection failure, which

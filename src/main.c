@@ -1,6 +1,6 @@
 /*
  * main.c
- * Copyright (c) 2010-2017 Arkadiusz Bokowy
+ * Copyright (c) 2010-2018 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -64,7 +64,7 @@ static struct cmtrack_info *get_track_info(int argc, char *argv[]) {
 	tinfo->status = CMSTATUS_UNDEFINED;
 
 	for (i = 1; i + 1 < argc; i += 2) {
-		debug("cmus argv: %s %s", argv[i], argv[i + 1]);
+		debug("Cmus argv: %s %s", argv[i], argv[i + 1]);
 		if (strcmp(argv[i], "status") == 0) {
 			if (strcmp(argv[i + 1], "playing") == 0)
 				tinfo->status = CMSTATUS_PLAYING;
@@ -166,13 +166,13 @@ static void cmusfm_spawn_server_process(const char *cmusfm) {
 	pid_t pid;
 
 	if ((pid = fork()) == -1) {
-		perror("error: fork server");
+		perror("ERROR: Fork server");
 		exit(EXIT_FAILURE);
 	}
 
 	if (pid == 0) {
 		execlp(cmusfm, cmusfm, "server", NULL);
-		perror("error: exec server");
+		perror("ERROR: Exec server");
 		exit(EXIT_FAILURE);
 	}
 
@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (cmusfm_config_read(cmusfm_config_file, &config) == -1) {
-		perror("error: config read");
+		perror("ERROR: Read config");
 		return EXIT_FAILURE;
 	}
 
@@ -211,7 +211,7 @@ int main(int argc, char *argv[]) {
 
 	/* try to parse cmus status display program arguments */
 	if ((tinfo = get_track_info(argc, argv)) == NULL) {
-		perror("error: get track info");
+		perror("ERROR: Get track info");
 		return EXIT_FAILURE;
 	}
 
@@ -220,8 +220,8 @@ int main(int argc, char *argv[]) {
 		sleep(1);
 	}
 
-	if (cmusfm_server_send_track(tinfo)) {
-		fprintf(stderr, "error: sending track to server failed\n");
+	if (cmusfm_server_send_track(tinfo) != 0) {
+		perror("ERROR: Send track");
 		return EXIT_FAILURE;
 	}
 

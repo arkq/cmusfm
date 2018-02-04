@@ -1,6 +1,6 @@
 /*
  * cache.c
- * Copyright (c) 2014-2017 Arkadiusz Bokowy
+ * Copyright (c) 2014-2018 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -122,8 +122,8 @@ void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf) {
 	struct cmusfm_cache_record *record;
 	size_t record_size;
 
-	debug("cache update: %ld", sb_tinf->timestamp);
-	debug("payload: %s - %s (%s) - %d. %s (%ds)",
+	debug("Cache update: %ld", sb_tinf->timestamp);
+	debug("Payload: %s - %s (%s) - %d. %s (%ds)",
 			sb_tinf->artist, sb_tinf->album, sb_tinf->album_artist,
 			sb_tinf->track_number, sb_tinf->track, sb_tinf->duration);
 
@@ -160,7 +160,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 	size_t rd_len, record_size;
 	char *ptr;
 
-	debug("cache submit");
+	debug("Cache submit");
 
 	if ((f = fopen(cmusfm_cache_file, "r")) == NULL)
 		return;
@@ -187,13 +187,13 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 			/* validate record type and first-stage data integration */
 			if (record->signature != CMUSFM_CACHE_SIGNATURE ||
 					record->checksum1 != get_cache_record_checksum1(record)) {
-				fprintf(stderr, "error: invalid cache record signature\n");
-				debug("signature: %x, checksum: %x", record->signature, record->checksum1);
+				fprintf(stderr, "ERROR: Invalid cache record signature\n");
+				debug("Signature: %x, checksum: %x", record->signature, record->checksum1);
 				goto return_failure;
 			}
 
 			record_size = get_cache_record_size(record);
-			debug("record size: %ld", record_size);
+			debug("Record size: %ld", record_size);
 
 			/* break if current record is truncated */
 			if ((void *)record - (void *)rd_buff + record_size > rd_len)
@@ -201,7 +201,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 
 			/* check for second-stage data integration */
 			if (record->checksum2 != get_cache_record_checksum2(record)) {
-				fprintf(stderr, "error: cache record data corrupted\n");
+				fprintf(stderr, "ERROR: Cache record data corrupted\n");
 				goto return_failure;
 			}
 
@@ -235,7 +235,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 			}
 #endif
 
-			debug("cache: %s - %s (%s) - %d. %s (%ds)",
+			debug("Cache: %s - %s (%s) - %d. %s (%ds)",
 					sb_tinf.artist, sb_tinf.album, sb_tinf.album_artist,
 					sb_tinf.track_number, sb_tinf.track, sb_tinf.duration);
 
