@@ -1,5 +1,5 @@
 # cmusfm - configure.ac
-# Copyright (c) 2014-2017 Arkadiusz Bokowy
+# Copyright (c) 2014-2018 Arkadiusz Bokowy
 
 AC_PREREQ([2.59])
 AC_INIT([cmusfm], [0.3.3], [arkadiusz.bokowy@gmail.com])
@@ -35,11 +35,11 @@ AC_CHECK_HEADERS([poll.h],
 AC_CHECK_HEADERS([sys/inotify.h])
 
 # support for system-wide MD5
-LIBCRYPTO_CFLAGS=
-LIBCRYPTO_LIBS=
-AC_CHECK_HEADERS([openssl/md5.h], [
-	PKG_CHECK_MODULES([LIBCRYPTO], [libcrypto])
-])
+PKG_CHECK_MODULES([LIBCRYPTO], [libcrypto], [
+	AC_CHECK_HEADERS([openssl/md5.h], [
+		AC_DEFINE([WITH_SYSTEM_MD5], [1], [Define to 1 if system MD5 is present.])
+	])
+], [#skip])
 
 PKG_CHECK_MODULES([LIBCURL], [libcurl])
 

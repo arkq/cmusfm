@@ -39,7 +39,7 @@
 # include "../config.h"
 #endif
 
-#ifdef HAVE_OPENSSL_MD5_H
+#ifdef WITH_SYSTEM_MD5
 # include <openssl/md5.h>
 #else
 
