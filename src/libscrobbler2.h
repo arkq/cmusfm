@@ -1,6 +1,6 @@
 /*
  * libscrobbler2.h
- * Copyright (c) 2011-2017 Arkadiusz Bokowy
+ * Copyright (c) 2011-2018 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -59,9 +59,22 @@ typedef struct scrobbler_session_tag {
 } scrobbler_session_t;
 
 typedef struct scrobbler_trackinfo_tag {
-	char *artist, *album, *album_artist, *track, *mbid;
-	unsigned int track_number, duration;
+	/* the time the track started playing */
 	time_t timestamp;
+	/* the MusicBrainz track ID */
+	char *mb_track_id;
+	/* the artist name */
+	char *artist;
+	/* the album artist */
+	char *album_artist;
+	/* the album name */
+	char *album;
+	/* the track number on the album */
+	int track_number;
+	/* the track name */
+	char *track;
+	/* the length of the track in seconds */
+	int duration;
 } scrobbler_trackinfo_t;
 
 scrobbler_session_t *scrobbler_initialize(const char *api_url,

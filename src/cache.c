@@ -37,7 +37,7 @@
 /* Return the actual size of the given cache record structure. */
 static size_t get_cache_record_size(const struct cmusfm_cache_record *record) {
 	return sizeof(*record) + record->len_artist + record->len_album +
-		record->len_track + record->len_album_artist + record->len_mbid;
+		record->len_track + record->len_album_artist + record->len_mb_track_id;
 }
 
 /* Return the checksum for the length-invariant part of the cache record
@@ -75,12 +75,10 @@ static struct cmusfm_cache_record *get_cache_record(const scrobbler_trackinfo_t 
 		record->len_album = strlen(sb_tinf->album) + 1;
 	if (sb_tinf->track)
 		record->len_track = strlen(sb_tinf->track) + 1;
-#if 0
 	if (sb_tinf->album_artist)
 		record->len_album_artist = strlen(sb_tinf->album_artist) + 1;
-	if (sb_tinf->mbid)
-		record->len_mbid = strlen(sb_tinf->mbid) + 1;
-#endif
+	if (sb_tinf->mb_track_id)
+		record->len_mb_track_id = strlen(sb_tinf->mb_track_id) + 1;
 
 	/* enlarge allocated memory for string data payload */
 	record = (struct cmusfm_cache_record *)realloc(record, get_cache_record_size(record));
@@ -98,16 +96,14 @@ static struct cmusfm_cache_record *get_cache_record(const scrobbler_trackinfo_t 
 		strcpy(ptr, sb_tinf->track);
 		ptr += record->len_track;
 	}
-#if 0
 	if (record->len_album_artist) {
 		strcpy(ptr, sb_tinf->album_artist);
 		ptr += record->len_album_artist;
 	}
-	if (record->len_mbid) {
-		strcpy(ptr, sb_tinf->mbid);
-		ptr += record->len_mbid;
+	if (record->len_mb_track_id) {
+		strcpy(ptr, sb_tinf->mb_track_id);
+		ptr += record->len_mb_track_id;
 	}
-#endif
 
 	record->checksum1 = get_cache_record_checksum1(record);
 	record->checksum2 = get_cache_record_checksum2(record);
@@ -142,7 +138,7 @@ void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf) {
 	record->len_album = htons(record->len_album);
 	record->len_track = htons(record->len_track);
 	record->len_album_artist = htons(record->len_album_artist);
-	record->len_mbid = htons(record->len_mbid);
+	record->len_mb_track_id = htons(record->len_mb_track_id);
 
 	fwrite(record, record_size, 1, f);
 
@@ -182,7 +178,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 			record->len_album = ntohs(record->len_album);
 			record->len_track = ntohs(record->len_track);
 			record->len_album_artist = ntohs(record->len_album_artist);
-			record->len_mbid = ntohs(record->len_mbid);
+			record->len_mb_track_id = ntohs(record->len_mb_track_id);
 
 			/* validate record type and first-stage data integration */
 			if (record->signature != CMUSFM_CACHE_SIGNATURE ||
@@ -224,16 +220,14 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 				sb_tinf.track = ptr;
 				ptr += record->len_track;
 			}
-#if 0
 			if (record->len_album_artist) {
 				sb_tinf.album_artist = ptr;
 				ptr += record->len_album_artist;
 			}
-			if (record->len_mbid) {
-				sb_tinf.mbid = ptr;
-				ptr += record->len_mbid;
+			if (record->len_mb_track_id) {
+				sb_tinf.mb_track_id = ptr;
+				ptr += record->len_mb_track_id;
 			}
-#endif
 
 			debug("Cache: %s - %s (%s) - %d. %s (%ds)",
 					sb_tinf.artist, sb_tinf.album, sb_tinf.album_artist,

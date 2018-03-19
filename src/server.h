@@ -1,6 +1,6 @@
 /*
  * server.h
- * Copyright (c) 2014-2017 Arkadiusz Bokowy
+ * Copyright (c) 2014-2018 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -41,15 +41,20 @@ struct cmusfm_data_record {
 	 *       because the hashing logic relies on this assumption. */
 	enum cmstatus status;
 
+	uint16_t disc_number;
 	uint16_t track_number;
 	uint16_t duration;
 
+	uint16_t off_artist;
+	uint16_t off_album_artist;
 	uint16_t off_album;
 	uint16_t off_title;
 	uint16_t off_location;
 
 	/* NULL-terminated strings
+	char mb_track_id[];
 	char artist[];
+	char album_artist[];
 	char album[];
 	char title[];
 	char location[];

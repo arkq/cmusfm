@@ -2,7 +2,7 @@
 # Copyright (c) 2014-2018 Arkadiusz Bokowy
 
 AC_PREREQ([2.59])
-AC_INIT([cmusfm], [0.3.3], [arkadiusz.bokowy@gmail.com])
+AC_INIT([cmusfm], [1.0.0], [arkadiusz.bokowy@gmail.com])
 AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
 
 AC_CONFIG_HEADERS([config.h])

@@ -1,6 +1,6 @@
 /*
  * cmusfm.h
- * Copyright (c) 2010-2017 Arkadiusz Bokowy
+ * Copyright (c) 2010-2018 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -56,9 +56,24 @@ enum cmstatus {
 
 /* structure for data obtained from cmus */
 struct cmtrack_info {
+
 	enum cmstatus status;
-	char *file, *url, *artist, *album, *title;
-	int track_number, duration;
+
+	char *file;
+	char *url;
+
+	/* the MusicBrainz track ID */
+	char *mb_track_id;
+
+	char *artist;
+	char *album_artist;
+	char *album;
+	int disc_number;
+	int track_number;
+	char *title;
+	char *date;
+	int duration;
+
 };
 
 

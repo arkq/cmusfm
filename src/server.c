@@ -48,9 +48,19 @@
 #endif
 
 
-/* Helper function for artist name retrieval. */
-static char *get_record_artist(const struct cmusfm_data_record *r) {
+/* Helper function for MB track ID retrieval. */
+static char *get_record_mb_track_id(const struct cmusfm_data_record *r) {
 	return (char *)(r + 1);
+}
+
+/* Helper function for artist retrieval. */
+static char *get_record_artist(const struct cmusfm_data_record *r) {
+	return &((char *)(r + 1))[r->off_artist];
+}
+
+/* Helper function for album artist retrieval. */
+static char *get_record_album_artist(const struct cmusfm_data_record *r) {
+	return &((char *)(r + 1))[r->off_album_artist];
 }
 
 /* Helper function for album name retrieval. */
@@ -58,8 +68,8 @@ static char *get_record_album(const struct cmusfm_data_record *r) {
 	return &((char *)(r + 1))[r->off_album];
 }
 
-/* Helper function for track name retrieval. */
-static char *get_record_track(const struct cmusfm_data_record *r) {
+/* Helper function for track title retrieval. */
+static char *get_record_title(const struct cmusfm_data_record *r) {
 	return &((char *)(r + 1))[r->off_title];
 }
 
@@ -77,20 +87,31 @@ static uint8_t make_record_checksum1(const struct cmusfm_data_record *r) {
 /* Return the data checksum of the given record structure. This checksum
  * does not include status field, so it can be used for data comparison. */
 static uint8_t make_record_checksum2(const struct cmusfm_data_record *r) {
-	return make_data_hash((unsigned char *)&r->track_number,
-			sizeof(*r) - ((void *)&r->track_number - (void *)r) +
-			r->off_title + r->off_location + strlen(get_record_location(r)));
+	return make_data_hash((unsigned char *)&r->disc_number,
+			sizeof(*r) - ((void *)&r->disc_number - (void *)r) +
+			r->off_location + strlen(get_record_location(r)));
 }
 
 /* Copy data from the message into the scrobbler structure. */
 static void set_trackinfo(scrobbler_trackinfo_t *sbt,
 		const struct cmusfm_data_record *record) {
-	memset(sbt, 0, sizeof(*sbt));
-	sbt->artist = get_record_artist(record);
-	sbt->album = get_record_album(record);
-	sbt->track = get_record_track(record);
+
+	char *tmp;
+
+	tmp = get_record_mb_track_id(record);
+	sbt->mb_track_id = tmp[0] != '\0' ? tmp : NULL;
+	tmp = get_record_artist(record);
+	sbt->artist = tmp[0] != '\0' ? tmp : NULL;
+	tmp = get_record_album_artist(record);
+	sbt->album_artist = tmp[0] != '\0' ? tmp : NULL;
+	tmp = get_record_album(record);
+	sbt->album = tmp[0] != '\0' ? tmp : NULL;
 	sbt->track_number = record->track_number;
+	tmp = get_record_title(record);
+	sbt->track = tmp[0] != '\0' ? tmp : NULL;
 	sbt->duration = record->duration;
+	sbt->timestamp = 0;
+
 }
 
 /* Process real server task - Last.fm submission. */
@@ -117,7 +138,7 @@ static void cmusfm_server_process_data(scrobbler_session_t *sbs,
 
 	debug("Payload: %s - %s - %d. %s (%ds)",
 			get_record_artist(record), get_record_album(record),
-			record->track_number, get_record_track(record),
+			record->track_number, get_record_title(record),
 			record->duration);
 	debug("Location: %s", get_record_location(record));
 
@@ -394,10 +415,8 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	int err, sock;
 
 	/* helper accessors for dynamic fields */
-	char *artist = &buffer[sizeof(*record)];
-	char *album = &buffer[sizeof(*record)];
-	char *title = &buffer[sizeof(*record)];
-	char *location = &buffer[sizeof(*record)];
+	char *mb_track_id = &buffer[sizeof(*record)];
+	char *artist, *album_artist, *album, *title, *location;
 
 	debug("Sending track to server");
 
@@ -405,16 +424,25 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
 	/* load data into the sock container */
 	record->status = tinfo->status;
+	record->disc_number = tinfo->disc_number;
 	record->track_number = tinfo->track_number;
 	/* if no duration time assume 3 min */
 	record->duration = tinfo->duration == 0 ? 180 : tinfo->duration;
+
+	if (tinfo->mb_track_id != NULL)
+		strcpy(mb_track_id, tinfo->mb_track_id);
+	artist = &mb_track_id[strlen(mb_track_id) + 1];
 
 	/* add Shoutcast (stream) flag */
 	if (tinfo->url != NULL)
 		record->status |= CMSTATUS_SHOUTCASTMASK;
 
+	/* use album artist as a fall-back if artist is missing */
+	if (tinfo->artist == NULL && tinfo->album_artist != NULL)
+		tinfo->artist = tinfo->album_artist;
+
 	if ((tinfo->url != NULL && tinfo->artist == NULL && tinfo->title != NULL) ||
-			(tinfo->file != NULL && tinfo->artist == NULL && tinfo->title == NULL)) {
+			(tinfo->file != NULL && !(tinfo->artist != NULL && tinfo->title != NULL))) {
 		debug("Regular expression matching mode");
 
 		if (tinfo->url != NULL) {
@@ -439,7 +467,8 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
 		match = get_regexp_match(matches, CMFORMAT_ARTIST);
 		strncpy(artist, match->data, match->len);
-		album = &artist[strlen(artist) + 1];
+		album_artist = &artist[strlen(artist) + 1];
+		album = &album_artist[strlen(album_artist) + 1];
 		match = get_regexp_match(matches, CMFORMAT_ALBUM);
 		strncpy(album, match->data, match->len);
 		title = &album[strlen(album) + 1];
@@ -451,11 +480,17 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	}
 	else {
 
-		if (tinfo->artist != NULL) strcpy(artist, tinfo->artist);
-		album = &artist[strlen(artist) + 1];
-		if (tinfo->album != NULL) strcpy(album, tinfo->album);
+		if (tinfo->artist != NULL)
+			strcpy(artist, tinfo->artist);
+		album_artist = &artist[strlen(artist) + 1];
+		if (tinfo->album_artist != NULL)
+			strcpy(album_artist, tinfo->album_artist);
+		album = &album_artist[strlen(album_artist) + 1];
+		if (tinfo->album != NULL)
+			strcpy(album, tinfo->album);
 		title = &album[strlen(album) + 1];
-		if (tinfo->title != NULL) strcpy(title, tinfo->title);
+		if (tinfo->title != NULL)
+			strcpy(title, tinfo->title);
 
 	}
 
@@ -467,9 +502,11 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 		strcpy(location, tinfo->url);
 
 	/* calculate data offsets */
-	record->off_album = album - artist;
-	record->off_title = title - artist;
-	record->off_location = location - artist;
+	record->off_artist = artist - mb_track_id;
+	record->off_album_artist = album_artist - mb_track_id;
+	record->off_album = album - mb_track_id;
+	record->off_title = title - mb_track_id;
+	record->off_location = location - mb_track_id;
 
 	/* calculate checksums - used for data integrity check */
 	record->checksum1 = make_record_checksum1(record);
@@ -484,7 +521,7 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 		goto fail;
 
 	ssize_t len = sizeof(struct cmusfm_data_record) +
-		record->off_title + record->off_location + strlen(location) + 1;
+		record->off_location + strlen(location) + 1;
 	debug("Record length: %zd", len);
 	if (write(sock, buffer, len) != len)
 		goto fail;

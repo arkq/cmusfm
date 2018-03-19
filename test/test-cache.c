@@ -1,6 +1,6 @@
 /*
  * test-cache.c
- * Copyright (c) 2015-2017 Arkadiusz Bokowy
+ * Copyright (c) 2015-2018 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -36,19 +36,19 @@ int main(void) {
 
 	scrobbler_trackinfo_t track_null = { 0 };
 	scrobbler_trackinfo_t track_empty = {
+		.mb_track_id = "",
 		.artist = "",
-		.album = "",
 		.album_artist = "",
+		.album = "",
 		.track = "",
-		.mbid = "",
 	};
 	scrobbler_trackinfo_t track_full = {
+		.mb_track_id = "b2181aae-5cba-496c-bb0c-b4cc0109ebf8",
 		.artist = "The Beatles",
-		.album = "Revolver",
 		.album_artist = "The Beatles",
-		.track = "Yellow Submarine",
-		.mbid = "b2181aae-5cba-496c-bb0c-b4cc0109ebf8",
+		.album = "Revolver",
 		.track_number = 6,
+		.track = "Yellow Submarine",
 		.duration = 161,
 		.timestamp = 1444444444,
 	};
@@ -59,8 +59,8 @@ int main(void) {
 
 	assert((f = fopen(cmusfm_cache_file, "r")) != NULL);
 	/* make sure the structure of the cache file is not changed */
-	assert((size = fread(buffer, 1, sizeof(buffer), f)) == 107);
-	assert(make_data_hash((unsigned char *)buffer, size) == 371117);
+	assert((size = fread(buffer, 1, sizeof(buffer), f)) == 158);
+	assert(make_data_hash((unsigned char *)buffer, size) == 856388);
 	fclose(f);
 
 	cmusfm_cache_submit(NULL);

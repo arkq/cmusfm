@@ -64,7 +64,7 @@ static struct cmtrack_info *get_track_info(int argc, char *argv[]) {
 	tinfo->status = CMSTATUS_UNDEFINED;
 
 	for (i = 1; i + 1 < argc; i += 2) {
-		debug("Cmus argv: %s %s", argv[i], argv[i + 1]);
+		debug("Received argument: %s: %s", argv[i], argv[i + 1]);
 		if (strcmp(argv[i], "status") == 0) {
 			if (strcmp(argv[i + 1], "playing") == 0)
 				tinfo->status = CMSTATUS_PLAYING;
@@ -77,14 +77,23 @@ static struct cmtrack_info *get_track_info(int argc, char *argv[]) {
 			tinfo->file = argv[i + 1];
 		else if (strcmp(argv[i], "url") == 0)
 			tinfo->url = argv[i + 1];
+		/* ID3 metadata exposed by cmus */
 		else if (strcmp(argv[i], "artist") == 0)
 			tinfo->artist = argv[i + 1];
+		else if (strcmp(argv[i], "albumartist") == 0)
+			tinfo->album_artist = argv[i + 1];
 		else if (strcmp(argv[i], "album") == 0)
 			tinfo->album = argv[i + 1];
+		else if (strcmp(argv[i], "discnumber") == 0)
+			tinfo->disc_number = atoi(argv[i + 1]);
 		else if (strcmp(argv[i], "tracknumber") == 0)
 			tinfo->track_number = atoi(argv[i + 1]);
 		else if (strcmp(argv[i], "title") == 0)
 			tinfo->title = argv[i + 1];
+		else if (strcmp(argv[i], "musicbrainz_trackid") == 0)
+			tinfo->mb_track_id = argv[i + 1];
+		else if (strcmp(argv[i], "date") == 0)
+			tinfo->date = argv[i + 1];
 		else if (strcmp(argv[i], "duration") == 0)
 			tinfo->duration = atoi(argv[i + 1]);
 	}

@@ -1,6 +1,6 @@
 /*
  * cache.h
- * Copyright (c) 2014-2017 Arkadiusz Bokowy
+ * Copyright (c) 2014-2018 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -44,14 +44,14 @@ struct __attribute__((__packed__)) cmusfm_cache_record {
 	uint16_t len_album;
 	uint16_t len_track;
 	uint16_t len_album_artist;
-	uint16_t len_mbid;
+	uint16_t len_mb_track_id;
 
 	/* NULL-terminated strings
 	char artist[];
 	char album[];
 	char album_artist[];
 	char track[];
-	char mbid[];
+	char mb_track_id[];
 	*/
 
 };

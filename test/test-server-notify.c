@@ -1,6 +1,6 @@
 /*
  * test-server-notify.c
- * Copyright (c) 2015-2017 Arkadiusz Bokowy
+ * Copyright (c) 2015-2018 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -16,14 +16,18 @@ int main(void) {
 	char track_buffer[512];
 	struct cmusfm_data_record *track = (struct cmusfm_data_record *)track_buffer;
 
-	track->duration = 35;
-	track->off_album = 20;
-	track->off_title = 40;
-	track->off_location = 60;
-	strcpy(((char *)(track + 1)), "The Beatles");
-	strcpy(((char *)(track + 1)) + 20, "");
-	strcpy(((char *)(track + 1)) + 40, "Yellow Submarine");
-	strcpy(((char *)(track + 1)) + 60, "");
+	track->off_artist = 20;
+	track->off_album_artist = 40;
+	track->off_album = 60;
+	track->off_title = 80;
+	track->off_location = 100;
+
+	strcpy(((char *)(track + 1)), "");
+	strcpy(((char *)(track + 1)) + track->off_artist, "The Beatles");
+	strcpy(((char *)(track + 1)) + track->off_album_artist, "");
+	strcpy(((char *)(track + 1)) + track->off_album, "");
+	strcpy(((char *)(track + 1)) + track->off_title, "Yellow Submarine");
+	strcpy(((char *)(track + 1)) + track->off_location, "");
 
 	config.nowplaying_localfile = true;
 	config.nowplaying_shoutcast = true;
