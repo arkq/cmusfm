@@ -32,7 +32,7 @@ int main(void) {
 	char buffer[512];
 	int i;
 
-	cmusfm_cache_file = tempnam(NULL, NULL);
+	cmusfm_cache_file = tempnam(".", "tmp-");
 
 	scrobbler_trackinfo_t track_null = { 0 };
 	scrobbler_trackinfo_t track_empty = {

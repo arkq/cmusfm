@@ -127,9 +127,9 @@ static void cmusfm_server_process_data(scrobbler_session_t *sbs,
 	static time_t started = 0, paused = 0, unpaused = 0;
 	static time_t playtime = 0, fulltime = 10;
 	scrobbler_trackinfo_t sb_tinf;
+	unsigned char status;
 	time_t pausedtime;
 	int checksum2;
-	char status;
 
 	/* check for data integrity */
 	if (make_record_checksum1(record) != record->checksum1 ||
@@ -409,7 +409,7 @@ final:
 /* Send track info to server instance. */
 int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
-	char buffer[CMSOCKET_BUFFER_SIZE];
+	char buffer[CMSOCKET_BUFFER_SIZE] = { 0 };
 	struct cmusfm_data_record *record = (struct cmusfm_data_record *)buffer;
 	struct format_match *match, *matches;
 	int err, sock;
@@ -417,12 +417,10 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	/* helper accessors for dynamic fields */
 	char *mb_track_id = &buffer[sizeof(*record)];
 	char *artist, *album_artist, *album, *title, *location;
+	size_t size = sizeof(buffer) - (mb_track_id - buffer) - 6;
 
 	debug("Sending track to server");
 
-	memset(buffer, 0, sizeof(buffer));
-
-	/* load data into the sock container */
 	record->status = tinfo->status;
 	record->disc_number = tinfo->disc_number;
 	record->track_number = tinfo->track_number;
@@ -430,8 +428,9 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	record->duration = tinfo->duration == 0 ? 180 : tinfo->duration;
 
 	if (tinfo->mb_track_id != NULL)
-		strcpy(mb_track_id, tinfo->mb_track_id);
+		strncpy(mb_track_id, tinfo->mb_track_id, size);
 	artist = &mb_track_id[strlen(mb_track_id) + 1];
+	size -= artist - mb_track_id - 1;
 
 	/* add Shoutcast (stream) flag */
 	if (tinfo->url != NULL)
@@ -466,14 +465,18 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 		}
 
 		match = get_regexp_match(matches, CMFORMAT_ARTIST);
-		strncpy(artist, match->data, match->len);
+		strncpy(artist, match->data, size < match->len ? size : match->len);
 		album_artist = &artist[strlen(artist) + 1];
 		album = &album_artist[strlen(album_artist) + 1];
+		size -= album - artist - 2;
+
 		match = get_regexp_match(matches, CMFORMAT_ALBUM);
-		strncpy(album, match->data, match->len);
+		strncpy(album, match->data, size < match->len ? size : match->len);
 		title = &album[strlen(album) + 1];
+		size -= title - album - 1;
+
 		match = get_regexp_match(matches, CMFORMAT_TITLE);
-		strncpy(title, match->data, match->len);
+		strncpy(title, match->data, size < match->len ? size : match->len);
 
 		free(matches);
 
@@ -481,25 +484,32 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 	else {
 
 		if (tinfo->artist != NULL)
-			strcpy(artist, tinfo->artist);
+			strncpy(artist, tinfo->artist, size);
 		album_artist = &artist[strlen(artist) + 1];
+		size -= album_artist - artist - 1;
+
 		if (tinfo->album_artist != NULL)
-			strcpy(album_artist, tinfo->album_artist);
+			strncpy(album_artist, tinfo->album_artist, size);
 		album = &album_artist[strlen(album_artist) + 1];
+		size -= album - album_artist - 1;
+
 		if (tinfo->album != NULL)
-			strcpy(album, tinfo->album);
+			strncpy(album, tinfo->album, size);
 		title = &album[strlen(album) + 1];
+		size -= title - album - 1;
+
 		if (tinfo->title != NULL)
-			strcpy(title, tinfo->title);
+			strncpy(title, tinfo->title, size);
 
 	}
 
 	/* update track location (localfile or shoutcast) */
 	location = &title[strlen(title) + 1];
+	size -= location - title - 1;
 	if (tinfo->file != NULL)
-		strcpy(location, tinfo->file);
+		strncpy(location, tinfo->file, size);
 	else if (tinfo->url != NULL)
-		strcpy(location, tinfo->url);
+		strncpy(location, tinfo->url, size);
 
 	/* calculate data offsets */
 	record->off_artist = artist - mb_track_id;

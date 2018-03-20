@@ -126,12 +126,53 @@ int test_track_parse_file_name(void) {
 	return 1;
 }
 
+int test_out_of_bounds_write(void) {
+
+	char buffer[CMSOCKET_BUFFER_SIZE / 3] = { 0 };
+	size_t i;
+
+	/* fill buffer with printable characters */
+	for (i = 0; i < sizeof(buffer) - 1; i++)
+		buffer[i] = '0' + (i % ('z' - '0'));
+
+	struct cmtrack_info track = {
+		.status = CMSTATUS_PLAYING,
+		.artist = buffer,
+		.album = buffer,
+		.title = buffer,
+	};
+
+	cmusfm_server_send_track(&track);
+	sleep(1); /* allow server to process data */
+
+	assert(strlen(scrobbler_update_now_playing_sbt.artist) == 340 /* sizeof(buffer) - 1 */);
+	assert(strlen(scrobbler_update_now_playing_sbt.album) == 340 /* sizeof(buffer) - 1 */);
+	assert(strlen(scrobbler_update_now_playing_sbt.track) == 314);
+
+	char tmp[CMSOCKET_BUFFER_SIZE] = { 0 };
+	snprintf(tmp, sizeof(tmp), "%s%s - %s", buffer, buffer, buffer);
+
+	/* check overrun for long URL */
+	track.url = "example.com";
+	track.artist = NULL;
+	track.title = tmp;
+
+	cmusfm_server_send_track(&track);
+	sleep(1); /* allow server to process data */
+
+	assert(strlen(scrobbler_update_now_playing_sbt.artist) == 680 /* 2 * (sizeof(buffer) - 1) */);
+	assert(strlen(scrobbler_update_now_playing_sbt.track) == 314);
+
+	return 2;
+}
+
 int main(void) {
 
 	/* place communication socket in the current directory */
 	cmusfm_socket_file = tempnam(".", "tmp-");
-	/* use "%artist - %title.ext" format for file name parser */
+	/* use "%artist - %title[.ext]" format for name parser */
 	strcpy(config.format_localfile, "^(?A.+) - (?T.+)\\.[^.]+$");
+	strcpy(config.format_shoutcast, "^(?A.+) - (?T.+)$");
 	/* for the sake of speed we will check now-playing events */
 	config.nowplaying_localfile = true;
 	config.nowplaying_shoutcast = true;
@@ -151,6 +192,8 @@ int main(void) {
 	count += test_track_full();
 	assert(scrobbler_update_now_playing_count == count);
 	count += test_track_parse_file_name();
+	assert(scrobbler_update_now_playing_count == count);
+	count += test_out_of_bounds_write();
 	assert(scrobbler_update_now_playing_count == count);
 
 	cmusfm_server_cleanup(0);
