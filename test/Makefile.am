@@ -16,3 +16,10 @@ check_PROGRAMS = \
 	test-server-submit03
 
 test_server_submit03_LDADD = -lpthread
+
+if ENABLE_LIBNOTIFY
+TESTS += test-notify
+check_PROGRAMS += test-notify
+test_notify_CFLAGS = @LIBNOTIFY_CFLAGS@
+test_notify_LDADD = @LIBNOTIFY_LIBS@
+endif

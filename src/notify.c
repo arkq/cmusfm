@@ -34,10 +34,6 @@ static NotifyNotification *cmus_notify;
 /* Show track information via the notification system. */
 void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon) {
 
-	GError *error = NULL;
-	char *body;
-	size_t art_len, alb_len;
-
 	/* initialize the notification subsystem if needed */
 	if (!notify_is_initted())
 		cmusfm_notify_initialize();
@@ -48,15 +44,44 @@ void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon) 
 		g_object_unref(G_OBJECT(cmus_notify));
 	}
 
-	/* concatenate artist and album (when applicable) */
-	art_len = strlen(sb_tinf->artist);
-	alb_len = strlen(sb_tinf->album);
-	body = (char *)malloc(art_len + alb_len + sizeof(" ()") + 1);
-	strcpy(body, sb_tinf->artist);
-	if (alb_len > 0)
-		sprintf(&body[art_len], " (%s)", sb_tinf->album);
+	GError *error = NULL;
+	const char *track = sb_tinf->track;
+	char *body = NULL;
 
-	cmus_notify = notify_notification_new(sb_tinf->track, body, icon);
+	const char *artist = "";
+	if (sb_tinf->artist != NULL)
+		artist = sb_tinf->artist;
+	else if (sb_tinf->album_artist != NULL)
+		artist = sb_tinf->album_artist;
+
+	const char *album = "";
+	if (sb_tinf->album != NULL)
+		album = sb_tinf->album;
+
+	size_t art_len = strlen(artist);
+	size_t alb_len = strlen(album);
+
+	/* concatenate artist (or album artist) and album */
+	if (art_len > 0 || alb_len > 0) {
+		body = (char *)malloc(art_len + alb_len + 3 + 1);
+		if (art_len > 0) {
+			strcpy(body, artist);
+			if (alb_len > 0)
+				sprintf(&body[art_len], " (%s)", album);
+		}
+		else
+			strcpy(body, album);
+	}
+
+	if (track == NULL || strlen(track) == 0) {
+		if (body == NULL)
+			/* do not display "empty" notification */
+			return;
+		cmus_notify = notify_notification_new(body, NULL, icon);
+	}
+	else
+		cmus_notify = notify_notification_new(track, body, icon);
+
 	if (!notify_notification_show(cmus_notify, &error)) {
 		debug("Desktop notify error: %s", error->message);
 		g_error_free(error);
@@ -66,7 +91,8 @@ void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon) 
 		cmusfm_notify_free();
 	}
 
-	free(body);
+	if (body != NULL)
+		free(body);
 }
 
 /* Initialize notification system. */
