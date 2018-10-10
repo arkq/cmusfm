@@ -510,6 +510,8 @@ const char *scrobbler_strerror(scrobbler_session_t *sbs) {
 		return "Authentication callback failure";
 	case SCROBBLER_STATUS_ERR_TRACKINF:
 		return "Missing required data for track";
+	default:
+		return "Unknown status";
 	}
 }
 
