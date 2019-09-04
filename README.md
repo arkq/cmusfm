@@ -1,10 +1,8 @@
-cmusfm [![Build Status](https://travis-ci.org/Arkq/cmusfm.svg?branch=master)](https://travis-ci.org/Arkq/cmusfm)
-======
+# cmusfm [![Build Status](https://travis-ci.org/Arkq/cmusfm.svg?branch=master)](https://travis-ci.org/Arkq/cmusfm)
 
-[Last.fm](http://www.last.fm/) standalone scrobbler for the [cmus](https://cmus.github.io/) music
-player.
+[Last.fm](http://www.last.fm/) standalone scrobbler for the [cmus](https://cmus.github.io/) music player.
 
-Features:
+## Features
 
 * Listening now notification support
 * Off-line played track cache for later submission
@@ -12,6 +10,8 @@ Features:
 * Desktop notification support (optionally)
 * Customizable scrobbling service
 * Small memory footprint
+
+## Overview
 
 When discography is correctly tagged - at least artist and title field - scrobbling needs no
 further configuration (see: [Configuration](#configuration)). However, if this requirement is not
@@ -62,34 +62,45 @@ shall use configuration as follows:
 * `service-auth-url = "https://libre.fm/api/auth"`
 
 
-Installation
-------------
+## Installation
 
-	$ autoreconf --install
-	$ mkdir build && cd build
-	$ ../configure --enable-libnotify
-	$ make && make install
+### Dependencies
 
+* [cmus](https://cmus.github.io/)
+* [libcurl](https://curl.haxx.se/libcurl/)
+* [libnotify](https://developer.gnome.org/libnotify/) (optional)
 
-Configuration
--------------
+### Building and install
+
+```shell
+autoreconf --install
+mkdir build && cd build
+../configure --enable-libnotify
+make && make install
+```
+
+## Configuration
 
 Before usage with the cmus music player, one has to grant access for the cmusfm in the Last.fm
 service. To do so, simply run cmusfm with the `init` argument and follow the instruction. This
 action might be also required when upgrading to the newer version with new features.
 
-	$ cmusfm init
+```shell
+cmusfm init
+```
 
 After that you can safely edit `~/.config/cmus/cmusfm.conf` configuration file.
 
 ~~Note, that for some changes to take place, restart of the cmusfm server process is required. To
-achieved this, one has to quit cmus player and then kill background instance of cmusfm (e.g.
-`pkill cmusfm`).~~ Above statement is not valid if one's got
-[inotify](http://en.wikipedia.org/wiki/Inotify) subsystem available.
+achieved this, one has to quit cmus player and then kill background instance of cmusfm (e.g. `pkill
+cmusfm`).~~ Above statement is not valid if one has [inotify](http://en.wikipedia.org/wiki/Inotify)
+subsystem available.
 
 As a final step (after the access is granted in the Last.fm service) one should set cmusfm as a
 status display program for cmus. This can be done by starting cmus and typing in the main window:
 
-	:set status_display_program=cmusfm
+```shell
+:set status_display_program=cmusfm
+```
 
 Enjoy!
