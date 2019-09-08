@@ -13,9 +13,14 @@
 
 ## Overview
 
-When discography is correctly tagged - at least artist and title field - scrobbling needs no further configuration (see: [Configuration](#configuration)). However, if this requirement is not met, then one can use POSIX ERE-based file name parser feature. But what the heck is this?
+When discography is correctly tagged - at least artist and title field - scrobbling needs no further
+configuration (see: [Configuration](#configuration)). However, if this requirement is not met, then one can
+use POSIX ERE-based file name parser feature. But what the heck is this?
 
-Cmusfm allows to configure regular expression patterns for local files and for shoutcast streaming services. The syntax is compatible with the [POSIX Extended Regular Expression](http://en.wikipedia.org/wiki/Regular_expression#Standards) (ERE) with one exception. Matched subexpression has to be marked with the `?` extension notation. There are four distinguish types:
+Cmusfm allows to configure regular expression patterns for local files and for shoutcast streaming
+services. The syntax is compatible with the [POSIX Extended Regular Expression](http://en.wikipedia.org/wiki/Regular_expression#Standards)
+(ERE) with one exception. Matched subexpression has to be marked with the `?` extension notation. There are
+four distinguish types:
 
 * `(?A...)` - match artist name
 * `(?B...)` - match album name
@@ -36,16 +41,22 @@ Scrobbling behavior and now playing notification can be controlled via the follo
 * `submit-localfile = "yes"`
 * `submit-shoutcast = "no"`
 
-Cmusfm provides also one extra feature, which was mentioned earlier - desktop notifications. In order to have this functionality, one has to enable it during the compilation stage. Since it is an extra feature, it is disabled by default in the cmusfm configuration file too. Note, that cover art file has to be explicitly stored in the current track's directory - embedded covers are not displayed. Exemplary configuration might be as follows:
+Cmusfm provides also one extra feature, which was mentioned earlier - desktop notifications. In order to
+have this functionality, one has to enable it during the compilation stage. Since it is an extra feature,
+it is disabled by default in the cmusfm configuration file too. Note, that cover art file has to be
+explicitly stored in the current track's directory - embedded covers are not displayed. Exemplary
+configuration might be as follows:
 
 * `notification = "yes"`
 * `format-coverfile = "^(cover|folder)\.jpg$"`
 
-By default cmusfm scrobbles to the Last.fm service. However, it is possible to change this behavior by modifying `service-api-url` and `service-auth-url` options in the configuration file. Afterwards, one should reinitialize cmusfm (`cmusfm init`) in order to authenticate with new scrobbling service. In order to use [Libre.fm](https://libre.fm/) as a scrobbling service, one shall use configuration as follows:
+By default cmusfm scrobbles to the Last.fm service. However, it is possible to change this behavior by
+modifying `service-api-url` and `service-auth-url` options in the configuration file. Afterwards, one
+should reinitialize cmusfm (`cmusfm init`) in order to authenticate with new scrobbling service. In order
+to use [Libre.fm](https://libre.fm/) as a scrobbling service, one shall use configuration as follows:
 
 * `service-api-url = "https://libre.fm/2.0/"`
 * `service-auth-url = "https://libre.fm/api/auth"`
-
 
 ## Installation
 
@@ -57,6 +68,8 @@ By default cmusfm scrobbles to the Last.fm service. However, it is possible to c
 
 ### Building and install
 
+#### Linux
+
 ```shell script
 autoreconf --install
 mkdir build && cd build
@@ -66,12 +79,14 @@ make && make install
 
 #### macOS
 
-You can install _libnotify_ and _libffi_ with _brew_: `brew install libnotify libffi`
-
-The caveat to this is that _libffi_ is keg-only, which means it was not symlinked into `/usr/local`. In this case, you'll run the command below instead of the original `configure` instruction.
+We don't have a need for `libnotify` as macOS. But will will need [terminal-notifier](https://github.com/julienXX/terminal-notifier).
 
 ```shell script
-PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig" ../configure --enable-libnotify
+brew install terminal-notifier
+autoreconf --install
+mkdir build && cd build
+../configure
+make && make install
 ```
 
 ## Configuration
