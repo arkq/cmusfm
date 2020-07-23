@@ -1,5 +1,5 @@
 # cmusfm - configure.ac
-# Copyright (c) 2014-2018 Arkadiusz Bokowy
+# Copyright (c) 2014-2020 Arkadiusz Bokowy
 
 AC_PREREQ([2.59])
 AC_INIT([cmusfm], [1.0.0], [arkadiusz.bokowy@gmail.com])
@@ -42,6 +42,14 @@ PKG_CHECK_MODULES([LIBCRYPTO], [libcrypto], [
 ], [#skip])
 
 PKG_CHECK_MODULES([LIBCURL], [libcurl])
+if $PKG_CONFIG --exact-version=7.71.0 libcurl; then
+	AC_MSG_ERROR([libcurl == 7.71.0
+
+Because of curl_easy_escape() bug present in the curl library version 7.71.0,
+cmusfm will not work correctly. Please, upgrade or downgrade the curl library.
+
+Related curl bug report: https://github.com/curl/curl/issues/5601])
+fi
 
 # support for desktop notifications
 AC_ARG_ENABLE([libnotify],

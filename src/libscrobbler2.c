@@ -1,6 +1,6 @@
 /*
  * libscrobbler2.c
- * Copyright (c) 2011-2018 Arkadiusz Bokowy
+ * Copyright (c) 2011-2020 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -58,8 +58,11 @@ static size_t sb_curl_write_callback(char *ptr, size_t size, size_t nmemb,
 
 	/* XXX: Passing a zero bytes data to this callback is not en error,
 	 *      however memory allocation fail is. */
-	if (!size || (rd->data = realloc(rd->data, rd->size + size + 1)) == NULL)
+	void *tmp = rd->data;
+	if (!size || (rd->data = realloc(rd->data, rd->size + size + 1)) == NULL) {
+		free(tmp);
 		return 0;
+	}
 
 	memcpy(&rd->data[rd->size], ptr, size);
 	rd->size += size;
