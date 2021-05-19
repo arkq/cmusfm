@@ -143,17 +143,18 @@ static scrobbler_status_t sb_check_response(struct sb_response_data *response,
 	return sbs->status = SCROBBLER_STATUS_OK;
 }
 
-/* Generate MD5 scrobbler API method signature. */
-static void sb_generate_method_signature(struct sb_getpost_data *sb_data,
-		int len, uint8_t secret[16], uint8_t sign[MD5_DIGEST_LENGTH]) {
+/* Generate MD5 signature for API call. */
+static void sb_generate_method_signature(
+		const scrobbler_session_t *sbs,
+		const struct sb_getpost_data *sb_data,
+		size_t sb_data_elements,
+		uint8_t sign[MD5_DIGEST_LENGTH]) {
 
 	char secret_hex[16 * 2 + 1];
 	char tmp_str[2048], format[8];
-	int x, offset;
+	size_t x, offset;
 
-	mem2hex(secret_hex, secret, 16);
-
-	for (x = offset = 0; x < len; x++) {
+	for (x = offset = 0; x < sb_data_elements; x++) {
 
 		/* it means that if numerical data is zero it is also discarded */
 		if (sb_data[x].data == NULL)
@@ -163,19 +164,30 @@ static void sb_generate_method_signature(struct sb_getpost_data *sb_data,
 		offset += sprintf(tmp_str + offset, format, sb_data[x].name, sb_data[x].data);
 	}
 
-	debug("Signature data: %s", tmp_str);
-	strcat(tmp_str, secret_hex);
+	strcat(tmp_str, mem2hex(secret_hex, sbs->secret, 16));
 	MD5((unsigned char *)tmp_str, strlen(tmp_str), sign);
+
+#if DEBUG
+	char *tmp;
+	if ((tmp = strstr(tmp_str, sbs->session_key)) != NULL)
+		memset(tmp, 'x', strlen(sbs->session_key));
+	debug("Signature data: %s", tmp_str);
+#endif
+
 }
 
-/* Make curl GET/POST string (escape data). */
-static char *sb_make_curl_getpost_string(CURL *curl, char *str_buffer,
-		struct sb_getpost_data *sb_data, int len) {
+/* Make curl GET/POST request string (escape data). */
+static char *sb_make_curl_getpost_string(
+		const scrobbler_session_t *sbs,
+		const struct sb_getpost_data *sb_data,
+		size_t sb_data_elements,
+		CURL *curl,
+		char *dest) {
 
 	char *escaped_data, format[8];
-	int x, offset;
+	size_t x, offset;
 
-	for (x = offset = 0; x < len; x++) {
+	for (x = offset = 0; x < sb_data_elements; x++) {
 
 		/* it means that if numerical data is zero it is also discarded */
 		if (sb_data[x].data == NULL)
@@ -186,21 +198,27 @@ static char *sb_make_curl_getpost_string(CURL *curl, char *str_buffer,
 		/* escape for string data */
 		if (sb_data[x].data_format == 's') {
 			escaped_data = curl_easy_escape(curl, sb_data[x].data, 0);
-			offset += sprintf(str_buffer + offset, format,
+			offset += sprintf(dest + offset, format,
 					sb_data[x].name, escaped_data);
 			curl_free(escaped_data);
 		}
 		else
 			/* non-string content - no need for escaping */
-			offset += sprintf(str_buffer + offset, format,
+			offset += sprintf(dest + offset, format,
 					sb_data[x].name, sb_data[x].data);
 	}
 
 	/* strip '&' from the end of the string */
-	str_buffer[offset - 1] = 0;
-	debug("Params: %s", str_buffer);
+	dest[offset - 1] = '\0';
 
-	return str_buffer;
+#if DEBUG
+	char *tmp;
+	if ((tmp = strstr(dest, sbs->session_key)) != NULL)
+		memset(tmp, 'x', strlen(sbs->session_key));
+	debug("Request: %s", dest);
+#endif
+
+	return dest;
 }
 
 /* Scrobble a track. */
@@ -246,11 +264,11 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
 	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
 
 	/* make signature for track.scrobble API call */
-	sb_generate_method_signature(sb_data, 11, sbs->secret, sign);
+	sb_generate_method_signature(sbs, sb_data, 11, sign);
 	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* make track.scrobble POST request */
-	sb_make_curl_getpost_string(curl, post_data, sb_data, 12);
+	sb_make_curl_getpost_string(sbs, sb_data, 12, curl, post_data);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
 	curl_easy_setopt(curl, CURLOPT_URL, sbs->api_url);
 
@@ -300,11 +318,11 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
 
 	/* make signature for track.updateNowPlaying API call */
-	sb_generate_method_signature(sb_data, 10, sbs->secret, sign);
+	sb_generate_method_signature(sbs, sb_data, 10, sign);
 	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* make track.updateNowPlaying POST request */
-	sb_make_curl_getpost_string(curl, post_data, sb_data, 11);
+	sb_make_curl_getpost_string(sbs, sb_data, 11, curl, post_data);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
 	curl_easy_setopt(curl, CURLOPT_URL, sbs->api_url);
 
@@ -380,12 +398,12 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
 
 	/* make signature for auth.getToken API call */
-	sb_generate_method_signature(sb_data_token, 2, sbs->secret, sign);
+	sb_generate_method_signature(sbs, sb_data_token, 2, sign);
 	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* make auth.getToken GET request */
 	sprintf(get_url, "%s?", sbs->api_url);
-	sb_make_curl_getpost_string(curl, get_url + strlen(get_url), sb_data_token, 3);
+	sb_make_curl_getpost_string(sbs, sb_data_token, 3, curl, get_url + strlen(get_url));
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 
 	status = sb_check_response(&response, curl_easy_perform(curl), sbs);
@@ -406,7 +424,7 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	}
 
 	/* make signature for auth.getSession API call */
-	sb_generate_method_signature(sb_data_session, 3, sbs->secret, sign);
+	sb_generate_method_signature(sbs, sb_data_session, 3, sign);
 	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* reinitialize response buffer */
@@ -414,7 +432,7 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 
 	/* make auth.getSession GET request */
 	sprintf(get_url, "%s?", sbs->api_url);
-	sb_make_curl_getpost_string(curl, get_url + strlen(get_url), sb_data_session, 4);
+	sb_make_curl_getpost_string(sbs, sb_data_session, 4, curl, get_url + strlen(get_url));
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 
 	status = sb_check_response(&response, curl_easy_perform(curl), sbs);
