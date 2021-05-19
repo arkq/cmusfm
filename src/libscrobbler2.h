@@ -1,6 +1,6 @@
 /*
  * libscrobbler2.h
- * Copyright (c) 2011-2018 Arkadiusz Bokowy
+ * Copyright (c) 2011-2021 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -29,7 +29,7 @@
 
 /* Status definitions. For more comprehensive information about errors,
  * see the errornum variable in the session structure. */
-typedef enum scrobbler_status_tag {
+typedef enum scrobbler_status {
 	SCROBBLER_STATUS_OK = 0,
 	SCROBBLER_STATUS_ERR_CURLINIT,  /* curl initialization error */
 	SCROBBLER_STATUS_ERR_CURLPERF,  /* curl perform error - network issue */
@@ -38,7 +38,37 @@ typedef enum scrobbler_status_tag {
 	SCROBBLER_STATUS_ERR_TRACKINF   /* missing required field in trackinfo */
 } scrobbler_status_t;
 
-typedef struct scrobbler_session_tag {
+/* Possible error codes returned by scrobbler API. */
+typedef enum scrobbler_api_error {
+	SCROBBLER_API_ERR_INVALID_SERVICE = 2,
+	SCROBBLER_API_ERR_INVALID_METHOD = 3,
+	SCROBBLER_API_ERR_AUTH_FAILED = 4,
+	SCROBBLER_API_ERR_INVALID_FORMAT = 5,
+	SCROBBLER_API_ERR_INVALID_PARAMS = 6,
+	SCROBBLER_API_ERR_INVALID_RESOURCE = 7,
+	SCROBBLER_API_ERR_OPERATION_FAILED = 8,
+	SCROBBLER_API_ERR_INVALID_SESSION_KEY = 9,
+	SCROBBLER_API_ERR_INVALID_API_KEY = 10,
+	SCROBBLER_API_ERR_SERVICE_OFFLINE = 11,
+	SCROBBLER_API_ERR_SUBSCRIBERS_ONLY = 12,
+	SCROBBLER_API_ERR_INVALID_SIGNATURE = 13,
+	SCROBBLER_API_ERR_UNAUTHORIZED_TOKEN = 14,
+	SCROBBLER_API_ERR_ITEM_NOT_AVAILABLE = 15,
+	SCROBBLER_API_ERR_SERVICE_UNAVAILABLE = 16,
+	SCROBBLER_API_ERR_LOGIN_REQUIRED = 17,
+	SCROBBLER_API_ERR_TRIAL_EXPIRED = 18,
+	SCROBBLER_API_ERR_NOT_ENOUGH_CONTENT = 20,
+	SCROBBLER_API_ERR_NOT_ENOUGH_MEMBERS = 21,
+	SCROBBLER_API_ERR_NOT_ENOUGH_FANS = 22,
+	SCROBBLER_API_ERR_NOT_ENOUGH_NEIGHBOURS = 23,
+	SCROBBLER_API_ERR_RADIO_NO_PEAK = 24,
+	SCROBBLER_API_ERR_RADIO_NOT_FOUND = 25,
+	SCROBBLER_API_ERR_API_KEY_SUSPENDED = 26,
+	SCROBBLER_API_ERR_DEPRECATED = 27,
+	SCROBBLER_API_ERR_LIMIT_EXCEDED = 29,
+} scrobbler_api_error_t;
+
+typedef struct scrobbler_session {
 
 	/* service API URL */
 	char api_url[64];
@@ -58,7 +88,7 @@ typedef struct scrobbler_session_tag {
 
 } scrobbler_session_t;
 
-typedef struct scrobbler_trackinfo_tag {
+typedef struct scrobbler_trackinfo {
 	/* the time the track started playing */
 	time_t timestamp;
 	/* the MusicBrainz track ID */

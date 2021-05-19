@@ -1,6 +1,6 @@
 /*
  * libscrobbler2.c
- * Copyright (c) 2011-2020 Arkadiusz Bokowy
+ * Copyright (c) 2011-2021 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -329,7 +329,14 @@ scrobbler_status_t scrobbler_update_now_playing(scrobbler_session_t *sbs,
 scrobbler_status_t scrobbler_test_session_key(scrobbler_session_t *sbs) {
 	debug("Session validation wrapper");
 	scrobbler_trackinfo_t sbt = { .artist = "", .track = "" };
-	return sb_update_now_playing(sbs, &sbt);
+	sb_update_now_playing(sbs, &sbt);
+	/* Because we are using invalid parameters for session key validation,
+	 * service might actually return the "Invalid Parameters" error code.
+	 * However, it means that the session key itself is valid. */
+	if (sbs->status == SCROBBLER_STATUS_ERR_SCROBAPI &&
+			sbs->errornum == SCROBBLER_API_ERR_INVALID_PARAMS)
+		return SCROBBLER_STATUS_OK;
+	return sbs->status;
 }
 
 /* Get the session key. */
@@ -473,42 +480,58 @@ const char *scrobbler_strerror(scrobbler_session_t *sbs) {
 	case SCROBBLER_STATUS_ERR_CURLPERF:
 		return curl_easy_strerror(sbs->errornum);
 	case SCROBBLER_STATUS_ERR_SCROBAPI:
-		switch (sbs->errornum) {
-		case 2:
+		switch ((scrobbler_api_error_t)sbs->errornum) {
+		case SCROBBLER_API_ERR_INVALID_SERVICE:
 			return "API: Invalid service";
-		case 3:
+		case SCROBBLER_API_ERR_INVALID_METHOD:
 			return "API: Invalid method";
-		case 4:
+		case SCROBBLER_API_ERR_AUTH_FAILED:
 			return "API: Authentication failed";
-		case 5:
+		case SCROBBLER_API_ERR_INVALID_FORMAT:
 			return "API: Invalid format";
-		case 6:
+		case SCROBBLER_API_ERR_INVALID_PARAMS:
 			return "API: Invalid parameters";
-		case 7:
+		case SCROBBLER_API_ERR_INVALID_RESOURCE:
 			return "API: Invalid resource";
-		case 8:
+		case SCROBBLER_API_ERR_OPERATION_FAILED:
 			return "API: Operation failed";
-		case 9:
+		case SCROBBLER_API_ERR_INVALID_SESSION_KEY:
 			return "API: Invalid session key";
-		case 10:
+		case SCROBBLER_API_ERR_INVALID_API_KEY:
 			return "API: Invalid API key";
-		case 11:
+		case SCROBBLER_API_ERR_SERVICE_OFFLINE:
 			return "API: Service temporarily unavailable";
-		case 13:
+		case SCROBBLER_API_ERR_SUBSCRIBERS_ONLY:
+			return "API: Subscribers only";
+		case SCROBBLER_API_ERR_INVALID_SIGNATURE:
 			return "API: Invalid signature";
-		case 14:
+		case SCROBBLER_API_ERR_UNAUTHORIZED_TOKEN:
 			return "API: Token not authorized";
-		case 15:
+		case SCROBBLER_API_ERR_ITEM_NOT_AVAILABLE:
 			return "API: Token has expired";
-		case 16:
-			return "API: Temporary error - please tray again";
-		case 26:
+		case SCROBBLER_API_ERR_SERVICE_UNAVAILABLE:
+			return "API: Service temporarily unavailable";
+		case SCROBBLER_API_ERR_LOGIN_REQUIRED:
+			return "API: Login required";
+		case SCROBBLER_API_ERR_TRIAL_EXPIRED:
+			return "API: Trial expired";
+		case SCROBBLER_API_ERR_NOT_ENOUGH_CONTENT:
+		case SCROBBLER_API_ERR_NOT_ENOUGH_MEMBERS:
+		case SCROBBLER_API_ERR_NOT_ENOUGH_FANS:
+		case SCROBBLER_API_ERR_NOT_ENOUGH_NEIGHBOURS:
+			return "API: Not enough content/members/etc.";
+		case SCROBBLER_API_ERR_RADIO_NO_PEAK:
+			return "API: Radio no peak usage";
+		case SCROBBLER_API_ERR_RADIO_NOT_FOUND:
+			return "API: Radio not found";
+		case SCROBBLER_API_ERR_API_KEY_SUSPENDED:
 			return "API: Suspended API key";
-		case 29:
+		case SCROBBLER_API_ERR_DEPRECATED:
+			return "API: Deprecated request";
+		case SCROBBLER_API_ERR_LIMIT_EXCEDED:
 			return "API: Rate limit exceeded";
-		default:
-			return "API: Unknown error";
 		}
+		return "API: Unknown error";
 	case SCROBBLER_STATUS_ERR_CALLBACK:
 		return "Authentication callback failure";
 	case SCROBBLER_STATUS_ERR_TRACKINF:
