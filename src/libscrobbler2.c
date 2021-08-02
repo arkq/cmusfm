@@ -181,8 +181,9 @@ static char *sb_make_curl_getpost_string(
 		const scrobbler_session_t *sbs,
 		const struct sb_getpost_data *sb_data,
 		size_t sb_data_elements,
-		CURL *curl,
-		char *dest) {
+		char *dest,
+		size_t dest_size,
+		CURL *curl) {
 
 	char *escaped_data, format[8];
 	size_t x, offset;
@@ -198,13 +199,13 @@ static char *sb_make_curl_getpost_string(
 		/* escape for string data */
 		if (sb_data[x].data_format == 's') {
 			escaped_data = curl_easy_escape(curl, sb_data[x].data, 0);
-			offset += sprintf(dest + offset, format,
+			offset += snprintf(dest + offset, dest_size - offset, format,
 					sb_data[x].name, escaped_data);
 			curl_free(escaped_data);
 		}
 		else
 			/* non-string content - no need for escaping */
-			offset += sprintf(dest + offset, format,
+			offset += snprintf(dest + offset, dest_size - offset, format,
 					sb_data[x].name, sb_data[x].data);
 	}
 
@@ -212,10 +213,11 @@ static char *sb_make_curl_getpost_string(
 	dest[offset - 1] = '\0';
 
 #if DEBUG
-	char *tmp;
-	if ((tmp = strstr(dest, sbs->session_key)) != NULL)
+	char data[2048] = {};
+	char *tmp = strncpy(data, dest, sizeof(data) - 1);
+	if ((tmp = strstr(tmp, sbs->session_key)) != NULL)
 		memset(tmp, 'x', strlen(sbs->session_key));
-	debug("Request: %s", dest);
+	debug("Request: %s", data);
 #endif
 
 	return dest;
@@ -268,7 +270,8 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
 	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* make track.scrobble POST request */
-	sb_make_curl_getpost_string(sbs, sb_data, 12, curl, post_data);
+	sb_make_curl_getpost_string(sbs, sb_data, 12,
+			post_data, sizeof(post_data), curl);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
 	curl_easy_setopt(curl, CURLOPT_URL, sbs->api_url);
 
@@ -322,7 +325,8 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* make track.updateNowPlaying POST request */
-	sb_make_curl_getpost_string(sbs, sb_data, 11, curl, post_data);
+	sb_make_curl_getpost_string(sbs, sb_data, 11,
+			post_data, sizeof(post_data), curl);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
 	curl_easy_setopt(curl, CURLOPT_URL, sbs->api_url);
 
@@ -364,7 +368,8 @@ const char *scrobbler_get_session_key(scrobbler_session_t *sbs) {
 
 /* Set the session key. */
 void scrobbler_set_session_key(scrobbler_session_t *sbs, const char *str) {
-	strncpy(sbs->session_key, str, sizeof(sbs->session_key));
+	strncpy(sbs->session_key, str, sizeof(sbs->session_key) - 1);
+	sbs->session_key[sizeof(sbs->session_key) - 1] = '\0';
 }
 
 /* Perform scrobbler service authentication process. */
@@ -378,6 +383,7 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	char sign_hex[sizeof(sign) * 2 + 1], token_hex[33];
 	char get_url[1024], *ptr;
 	struct sb_response_data response;
+	size_t len;
 
 	/* data in alphabetical order sorted by name field (except api_sig) */
 	struct sb_getpost_data sb_data_token[] = {
@@ -402,8 +408,9 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* make auth.getToken GET request */
-	sprintf(get_url, "%s?", sbs->api_url);
-	sb_make_curl_getpost_string(sbs, sb_data_token, 3, curl, get_url + strlen(get_url));
+	len = snprintf(get_url, sizeof(get_url), "%s?", sbs->api_url);
+	sb_make_curl_getpost_string(sbs, sb_data_token, 3,
+			get_url + len, sizeof(get_url) - len, curl);
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 
 	status = sb_check_response(&response, curl_easy_perform(curl), sbs);
@@ -413,7 +420,7 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	}
 
 	memcpy(token_hex, strstr(response.data, "<token>") + 7, 32);
-	token_hex[32] = 0;
+	token_hex[32] = '\0';
 
 	/* perform user authorization (callback function) */
 	sprintf(get_url, "%s?api_key=%s&token=%s",
@@ -431,8 +438,9 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	response.size = 0;
 
 	/* make auth.getSession GET request */
-	sprintf(get_url, "%s?", sbs->api_url);
-	sb_make_curl_getpost_string(sbs, sb_data_session, 4, curl, get_url + strlen(get_url));
+	len = snprintf(get_url, sizeof(get_url), "%s?", sbs->api_url);
+	sb_make_curl_getpost_string(sbs, sb_data_session, 4,
+			get_url + len, sizeof(get_url) - len, curl);
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 
 	status = sb_check_response(&response, curl_easy_perform(curl), sbs);
