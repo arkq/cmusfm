@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #if HAVE_SYS_INOTIFY_H
 # include <sys/inotify.h>
 #endif
@@ -129,14 +130,17 @@ int cmusfm_config_read(const char *fname, struct cmusfm_config *conf) {
 /* Write cmusfm configuration to the file. */
 int cmusfm_config_write(const char *fname, struct cmusfm_config *conf) {
 
+	int fd;
 	FILE *f;
 
-	/* create configuration file (truncate previous one) */
-	if ((f = fopen(fname, "w")) == NULL)
+	/* Create configuration file (truncate previous one) and set
+	 * access mode to protect session key from exposure. */
+	if ((fd = creat(fname, S_IRUSR | S_IWUSR)) == -1)
 		return -1;
-
-	/* protect session key from exposure */
-	chmod(fname, S_IWUSR | S_IRUSR);
+	if ((f = fdopen(fd, "w")) == NULL) {
+		close(fd);
+		return -1;
+	}
 
 	fprintf(f, "# authentication\n");
 	fprintf(f, "%s = \"%s\"\n", CMCONF_USER_NAME, conf->user_name);
