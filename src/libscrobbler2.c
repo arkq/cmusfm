@@ -29,23 +29,36 @@
 #include "debug.h"
 #include "md5.c"
 
+/**
+ * Convenient macro for getting "on the stack" array size. */
+#define ARRAYSIZE(a) (sizeof(a) / sizeof(*(a)))
 
-static char *mem2hex(char *dest, const unsigned char *mem, size_t n);
+/**
+ * Type of the request value. */
+enum sb_request_data_type {
+	SB_REQUEST_DATA_TYPE_STRING,
+	SB_REQUEST_DATA_TYPE_NUMBER,
+};
 
+/**
+ * Request data name-value element. */
+struct sb_request_data {
+	char *name;
+	enum sb_request_data_type type;
+	union {
+		const char *s;
+		unsigned long n;
+	} value;
+};
 
-/* used as a buffer for GET/POST server response */
+/**
+ * Data structure for GET/POST server response. */
 struct sb_response_data {
 	char *data;
 	int size;
 };
 
-/* used for quick URL and signature creation process */
-struct sb_getpost_data {
-	char *name;
-	char data_format;
-	void *data;
-};
-
+static char *mem2hex(char *dest, const unsigned char *mem, size_t n);
 
 /* CURL write callback function. */
 static size_t sb_curl_write_callback(char *ptr, size_t size, size_t nmemb,
@@ -143,28 +156,46 @@ static scrobbler_status_t sb_check_response(struct sb_response_data *response,
 	return sbs->status = SCROBBLER_STATUS_OK;
 }
 
-/* Generate MD5 signature for API call. */
+/**
+ * Generate MD5 signature for API call. */
 static void sb_generate_method_signature(
 		const scrobbler_session_t *sbs,
-		const struct sb_getpost_data *sb_data,
-		size_t sb_data_elements,
+		const struct sb_request_data *sb_data,
+		size_t sb_request_elements,
 		uint8_t sign[MD5_DIGEST_LENGTH]) {
 
 	char secret_hex[16 * 2 + 1];
-	char tmp_str[2048], format[8];
-	size_t x, offset;
+	char tmp_str[2048];
+	size_t i, offset;
 
-	for (x = offset = 0; x < sb_data_elements; x++) {
+	offset = 0;
+	for (i = 0; i < sb_request_elements; i++) {
 
-		/* it means that if numerical data is zero it is also discarded */
-		if (sb_data[x].data == NULL)
-			continue;
+		switch (sb_data[i].type) {
+		case SB_REQUEST_DATA_TYPE_NUMBER:
+			/* discard zero numeric values */
+			if (sb_data[i].value.n == 0)
+				continue;
+			offset += snprintf(&tmp_str[offset], sizeof(tmp_str) - offset,
+					"%s%lu", sb_data[i].name, sb_data[i].value.n);
+			break;
+		case SB_REQUEST_DATA_TYPE_STRING:
+			/* discard NULL string values */
+			if (sb_data[i].value.s == NULL)
+				continue;
+			offset += snprintf(&tmp_str[offset], sizeof(tmp_str) - offset,
+					"%s%s", sb_data[i].name, sb_data[i].value.s);
+			break;
+		}
 
-		sprintf(format, "%%s%%%c", sb_data[x].data_format);
-		offset += sprintf(tmp_str + offset, format, sb_data[x].name, sb_data[x].data);
+		/* check for potential overflow */
+		if (offset > sizeof(tmp_str))
+			break;
+
 	}
 
-	strcat(tmp_str, mem2hex(secret_hex, sbs->secret, 16));
+	if (offset <= sizeof(tmp_str) - sizeof(secret_hex))
+		strcpy(&tmp_str[offset], mem2hex(secret_hex, sbs->secret, 16));
 	MD5((unsigned char *)tmp_str, strlen(tmp_str), sign);
 
 #if DEBUG
@@ -176,48 +207,56 @@ static void sb_generate_method_signature(
 
 }
 
-/* Make curl GET/POST request string (escape data). */
-static char *sb_make_curl_getpost_string(
+/**
+ * Make curl GET/POST request string. */
+static char *sb_make_curl_request_string(
 		const scrobbler_session_t *sbs,
-		const struct sb_getpost_data *sb_data,
-		size_t sb_data_elements,
+		const struct sb_request_data *sb_data,
+		size_t sb_request_elements,
 		char *dest,
 		size_t dest_size,
 		CURL *curl) {
 
-	char *escaped_data, format[8];
-	size_t x, offset;
+	char *escaped_data;
+	size_t i, offset;
 
-	for (x = offset = 0; x < sb_data_elements; x++) {
+	offset = 0;
+	for (i = 0; i < sb_request_elements; i++) {
 
-		/* it means that if numerical data is zero it is also discarded */
-		if (sb_data[x].data == NULL)
-			continue;
-
-		sprintf(format, "%%s=%%%c&", sb_data[x].data_format);
-
-		/* escape for string data */
-		if (sb_data[x].data_format == 's') {
-			escaped_data = curl_easy_escape(curl, sb_data[x].data, 0);
-			offset += snprintf(dest + offset, dest_size - offset, format,
-					sb_data[x].name, escaped_data);
+		switch (sb_data[i].type) {
+		case SB_REQUEST_DATA_TYPE_NUMBER:
+			/* discard zero numeric values */
+			if (sb_data[i].value.n == 0)
+				continue;
+			offset += snprintf(&dest[offset], dest_size - offset,
+					"%s=%lu&", sb_data[i].name, sb_data[i].value.n);
+			break;
+		case SB_REQUEST_DATA_TYPE_STRING:
+			/* discard NULL string values */
+			if (sb_data[i].value.s == NULL)
+				continue;
+			/* escape for string data */
+			escaped_data = curl_easy_escape(curl, sb_data[i].value.s, 0);
+			offset += snprintf(&dest[offset], dest_size - offset,
+					"%s=%s&", sb_data[i].name, escaped_data);
 			curl_free(escaped_data);
+			break;
 		}
-		else
-			/* non-string content - no need for escaping */
-			offset += snprintf(dest + offset, dest_size - offset, format,
-					sb_data[x].name, sb_data[x].data);
+
+		/* check for potential overflow */
+		if (offset > dest_size)
+			break;
 	}
 
 	/* strip '&' from the end of the string */
 	dest[offset - 1] = '\0';
 
 #if DEBUG
-	char data[2048] = {};
-	char *tmp = strncpy(data, dest, sizeof(data) - 1);
+	char tmp_str[2048] = {};
+	char *tmp = strncpy(tmp_str, dest, sizeof(tmp_str) - 1);
 	if ((tmp = strstr(tmp, sbs->session_key)) != NULL)
 		memset(tmp, 'x', strlen(sbs->session_key));
-	debug("Request: %s", data);
+	debug("Request: %s", tmp_str);
 #endif
 
 	return dest;
@@ -235,21 +274,21 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
 	struct sb_response_data response;
 
 	/* data in alphabetical order sorted by name field (except api_sig) */
-	struct sb_getpost_data sb_data[] = {
-		{"album", 's', sbt->album},
-		{"albumArtist", 's', sbt->album_artist},
-		{"api_key", 's', api_key_hex},
-		{"artist", 's', sbt->artist},
-		/* {"context", 's', NULL}, */
-		{"duration", 'd', (void *)(long)sbt->duration},
-		{"mbid", 's', sbt->mb_track_id},
-		{"method", 's', "track.scrobble"},
-		{"sk", 's', sbs->session_key},
-		{"timestamp", 'd', (void *)sbt->timestamp},
-		{"track", 's', sbt->track},
-		{"trackNumber", 'd', (void *)(long)sbt->track_number},
-		/* {"streamId", 's', NULL}, */
-		{"api_sig", 's', sign_hex},
+	const struct sb_request_data sb_data[] = {
+		{ "album", SB_REQUEST_DATA_TYPE_STRING, { .s = sbt->album } },
+		{ "albumArtist", SB_REQUEST_DATA_TYPE_STRING, { .s = sbt->album_artist } },
+		{ "api_key", SB_REQUEST_DATA_TYPE_STRING, { .s = api_key_hex } },
+		{ "artist", SB_REQUEST_DATA_TYPE_STRING, { .s = sbt->artist } },
+		/* { "context", SB_REQUEST_DATA_TYPE_STRING }, */
+		{ "duration", SB_REQUEST_DATA_TYPE_NUMBER, { .n = sbt->duration } },
+		{ "mbid", SB_REQUEST_DATA_TYPE_STRING, { .s = sbt->mb_track_id } },
+		{ "method", SB_REQUEST_DATA_TYPE_STRING, { .s = "track.scrobble" } },
+		{ "sk", SB_REQUEST_DATA_TYPE_STRING, { .s = sbs->session_key } },
+		{ "timestamp", SB_REQUEST_DATA_TYPE_NUMBER, { .n = sbt->timestamp } },
+		{ "track", SB_REQUEST_DATA_TYPE_STRING, { .s = sbt->track } },
+		{ "trackNumber", SB_REQUEST_DATA_TYPE_NUMBER, { .n = sbt->track_number } },
+		/* { "streamId", SB_REQUEST_DATA_TYPE_STRING }, */
+		{ "api_sig", SB_REQUEST_DATA_TYPE_STRING, { .s = sign_hex } },
 	};
 
 	debug("Scrobble: %ld", sbt->timestamp);
@@ -266,11 +305,11 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
 	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
 
 	/* make signature for track.scrobble API call */
-	sb_generate_method_signature(sbs, sb_data, 11, sign);
+	sb_generate_method_signature(sbs, sb_data, ARRAYSIZE(sb_data) - 1, sign);
 	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* make track.scrobble POST request */
-	sb_make_curl_getpost_string(sbs, sb_data, 12,
+	sb_make_curl_request_string(sbs, sb_data, ARRAYSIZE(sb_data),
 			post_data, sizeof(post_data), curl);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
 	curl_easy_setopt(curl, CURLOPT_URL, sbs->api_url);
@@ -295,19 +334,19 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 	struct sb_response_data response;
 
 	/* data in alphabetical order sorted by name field (except api_sig) */
-	struct sb_getpost_data sb_data[] = {
-		{"album", 's', sbt->album},
-		{"albumArtist", 's', sbt->album_artist},
-		{"api_key", 's', api_key_hex},
-		{"artist", 's', sbt->artist},
-		/* {"context", 's', NULL}, */
-		{"duration", 'd', (void *)(long)sbt->duration},
-		{"mbid", 's', sbt->mb_track_id},
-		{"method", 's', "track.updateNowPlaying"},
-		{"sk", 's', sbs->session_key},
-		{"track", 's', sbt->track},
-		{"trackNumber", 'd', (void *)(long)sbt->track_number},
-		{"api_sig", 's', sign_hex},
+	const struct sb_request_data sb_data[] = {
+		{ "album", SB_REQUEST_DATA_TYPE_STRING, { .s = sbt->album } },
+		{ "albumArtist", SB_REQUEST_DATA_TYPE_STRING, { .s = sbt->album_artist } },
+		{ "api_key", SB_REQUEST_DATA_TYPE_STRING, { .s = api_key_hex } },
+		{ "artist", SB_REQUEST_DATA_TYPE_STRING, { .s = sbt->artist } },
+		/* { "context", SB_REQUEST_DATA_TYPE_STRING }, */
+		{ "duration", SB_REQUEST_DATA_TYPE_NUMBER, { .n = sbt->duration } },
+		{ "mbid", SB_REQUEST_DATA_TYPE_STRING, { .s = sbt->mb_track_id } },
+		{ "method", SB_REQUEST_DATA_TYPE_STRING, { .s = "track.updateNowPlaying" } },
+		{ "sk", SB_REQUEST_DATA_TYPE_STRING, { .s = sbs->session_key } },
+		{ "track", SB_REQUEST_DATA_TYPE_STRING, { .s = sbt->track } },
+		{ "trackNumber", SB_REQUEST_DATA_TYPE_NUMBER, { .n = sbt->track_number } },
+		{ "api_sig", SB_REQUEST_DATA_TYPE_STRING, { .s = sign_hex } },
 	};
 
 	debug("Now playing: %ld", sbt->timestamp);
@@ -321,11 +360,11 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
 
 	/* make signature for track.updateNowPlaying API call */
-	sb_generate_method_signature(sbs, sb_data, 10, sign);
+	sb_generate_method_signature(sbs, sb_data, ARRAYSIZE(sb_data) - 1, sign);
 	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* make track.updateNowPlaying POST request */
-	sb_make_curl_getpost_string(sbs, sb_data, 11,
+	sb_make_curl_request_string(sbs, sb_data, ARRAYSIZE(sb_data),
 			post_data, sizeof(post_data), curl);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
 	curl_easy_setopt(curl, CURLOPT_URL, sbs->api_url);
@@ -386,16 +425,18 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	size_t len;
 
 	/* data in alphabetical order sorted by name field (except api_sig) */
-	struct sb_getpost_data sb_data_token[] = {
-		{"api_key", 's', api_key_hex},
-		{"method", 's', "auth.getToken"},
-		{"api_sig", 's', sign_hex},
+	const struct sb_request_data sb_data_token[] = {
+		{ "api_key", SB_REQUEST_DATA_TYPE_STRING, { .s = api_key_hex } },
+		{ "method", SB_REQUEST_DATA_TYPE_STRING, { .s = "auth.getToken" } },
+		{ "api_sig", SB_REQUEST_DATA_TYPE_STRING, { .s = sign_hex } },
 	};
-	struct sb_getpost_data sb_data_session[] = {
-		{"api_key", 's', api_key_hex},
-		{"method", 's', "auth.getSession"},
-		{"token", 's', token_hex},
-		{"api_sig", 's', sign_hex},
+
+	/* data in alphabetical order sorted by name field (except api_sig) */
+	const struct sb_request_data sb_data_session[] = {
+		{ "api_key", SB_REQUEST_DATA_TYPE_STRING, { .s = api_key_hex } },
+		{ "method", SB_REQUEST_DATA_TYPE_STRING, { .s = "auth.getSession" } },
+		{ "token", SB_REQUEST_DATA_TYPE_STRING, { .s = token_hex } },
+		{ "api_sig", SB_REQUEST_DATA_TYPE_STRING, { .s = sign_hex } },
 	};
 
 	if ((curl = sb_curl_init(CURLOPT_HTTPGET, &response)) == NULL)
@@ -404,12 +445,12 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	mem2hex(api_key_hex, sbs->api_key, sizeof(sbs->api_key));
 
 	/* make signature for auth.getToken API call */
-	sb_generate_method_signature(sbs, sb_data_token, 2, sign);
+	sb_generate_method_signature(sbs, sb_data_token, ARRAYSIZE(sb_data_token) - 1, sign);
 	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* make auth.getToken GET request */
 	len = snprintf(get_url, sizeof(get_url), "%s?", sbs->api_url);
-	sb_make_curl_getpost_string(sbs, sb_data_token, 3,
+	sb_make_curl_request_string(sbs, sb_data_token, ARRAYSIZE(sb_data_token),
 			get_url + len, sizeof(get_url) - len, curl);
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 
@@ -431,7 +472,7 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	}
 
 	/* make signature for auth.getSession API call */
-	sb_generate_method_signature(sbs, sb_data_session, 3, sign);
+	sb_generate_method_signature(sbs, sb_data_session, ARRAYSIZE(sb_data_session) - 1, sign);
 	mem2hex(sign_hex, sign, sizeof(sign));
 
 	/* reinitialize response buffer */
@@ -439,7 +480,7 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 
 	/* make auth.getSession GET request */
 	len = snprintf(get_url, sizeof(get_url), "%s?", sbs->api_url);
-	sb_make_curl_getpost_string(sbs, sb_data_session, 4,
+	sb_make_curl_request_string(sbs, sb_data_session, ARRAYSIZE(sb_data_session),
 			get_url + len, sizeof(get_url) - len, curl);
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 
