@@ -1,6 +1,6 @@
 /*
  * cache.c
- * Copyright (c) 2014-2018 Arkadiusz Bokowy
+ * Copyright (c) 2014-2021 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -44,14 +44,14 @@ static size_t get_cache_record_size(const struct cmusfm_cache_record *record) {
  * structure - segmentation-fault-safe checksum. */
 static uint8_t get_cache_record_checksum1(const struct cmusfm_cache_record *record) {
 	return make_data_hash((unsigned char *)&record->timestamp,
-			sizeof(*record) - ((void *)&record->timestamp - (void *)record));
+			sizeof(*record) - ((char *)&record->timestamp - (char *)record));
 }
 
 /* Return the data checksum of the given cache record structure. If the
  * overall record length is compromised, we might end up dead... */
 static uint8_t get_cache_record_checksum2(const struct cmusfm_cache_record *record) {
 	return make_data_hash((unsigned char *)&record->timestamp,
-			get_cache_record_size(record) - ((void *)&record->timestamp - (void *)record));
+			get_cache_record_size(record) - ((char *)&record->timestamp - (char *)record));
 }
 
 /* Copy scrobbler track info into the cache record structure. Returned
@@ -167,7 +167,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 		record = (struct cmusfm_cache_record *)rd_buff;
 
 		/* iterate while there is no enough data for full cache record header */
-		while ((void *)record - (void *)rd_buff + sizeof(*record) <= rd_len) {
+		while (((char *)record - rd_buff) + sizeof(*record) <= rd_len) {
 
 			/* convert "universal" endianness to the host one */
 			record->signature = ntohs(record->signature);
@@ -192,7 +192,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 			debug("Record size: %ld", record_size);
 
 			/* break if current record is truncated */
-			if ((void *)record - (void *)rd_buff + record_size > rd_len)
+			if (((char *)record - rd_buff) + record_size > rd_len)
 				break;
 
 			/* check for second-stage data integration */
@@ -240,10 +240,10 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 			record = (struct cmusfm_cache_record *)((char *)record + record_size);
 		}
 
-		if ((unsigned)((void *)record - (void *)rd_buff) != rd_len)
+		if ((size_t)((char *)record - rd_buff) != rd_len)
 			/* seek to the beginning of the current record, because it is
 			 * truncated, so we have to read it one more time */
-			fseek(f, (void *)record - (void *)rd_buff - rd_len, SEEK_CUR);
+			fseek(f, ((char *)record - rd_buff) - rd_len, SEEK_CUR);
 	}
 
 return_failure:

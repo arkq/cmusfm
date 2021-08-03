@@ -1,6 +1,6 @@
 /*
  * server.c
- * Copyright (c) 2010-2018 Arkadiusz Bokowy
+ * Copyright (c) 2010-2021 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -81,14 +81,14 @@ static char *get_record_location(const struct cmusfm_data_record *r) {
 /* Return the checksum for the length-invariant part of the record. */
 static uint8_t make_record_checksum1(const struct cmusfm_data_record *r) {
 	return make_data_hash((unsigned char *)&r->status,
-			sizeof(*r) - ((void *)&r->status - (void *)r));
+			sizeof(*r) - ((char *)&r->status - (char *)r));
 }
 
 /* Return the data checksum of the given record structure. This checksum
  * does not include status field, so it can be used for data comparison. */
 static uint8_t make_record_checksum2(const struct cmusfm_data_record *r) {
 	return make_data_hash((unsigned char *)&r->disc_number,
-			sizeof(*r) - ((void *)&r->disc_number - (void *)r) +
+			sizeof(*r) - ((char *)&r->disc_number - (char *)r) +
 			r->off_location + strlen(get_record_location(r)));
 }
 
