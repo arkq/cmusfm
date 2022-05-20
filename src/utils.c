@@ -127,15 +127,12 @@ char *get_album_cover_file(const char *location, const char *format) {
 	const char patern[7] = "cue://";
 	char *location_t;
 	location_t = strdup(location);
-	register int j;
-	register int n = strlen(location_t);
 	int ret;
 
 	ret = strncmp(location, patern, 6);
+
 	if (!ret) {
-		for(j = 0; j <= n; j++) {
-			memmove(&location_t[j], &location_t[j + 6], 6);
-		}
+	strcpy(location_t, &location[6]);
 	location = dirname(location_t);
 	debug("location: %s", location);
 	}
