@@ -129,7 +129,6 @@ char *get_album_cover_file(const char *location, const char *format) {
 	location_t = strdup(location);
 	register int j;
 	register int n = strlen(location_t);
-	char res[7];
 	int ret;
 
 	ret = strncmp(location, patern, 6);
