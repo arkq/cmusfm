@@ -123,6 +123,25 @@ char *get_album_cover_file(const char *location, const char *format) {
 	regex_t regex;
 	char *tmp;
 
+	/* chek cue file path play  */
+	const char patern[7] = "cue://";
+	char *location_t;
+	location_t = strdup(location);
+	register int j;
+	register int n = strlen(location_t);
+	char res[7];
+	int ret;
+
+	ret = strncmp(location, patern, 6);
+	if (!ret) {
+		for(j = 0; j <= n; j++) {
+			memmove(&location_t[j], &location_t[j + 6], 6);
+		}
+	location = dirname(location_t);
+	debug("location: %s", location);
+	}
+	/* End chek cue file path play */
+
 	debug("Get cover (case-insensitive): %s", format);
 
 	if (location == NULL)
@@ -136,7 +155,7 @@ char *get_album_cover_file(const char *location, const char *format) {
 
 	tmp = strdup(location);
 	strcpy(fname, dirname(tmp));
-	free(tmp);
+        free(tmp);
 
 	if ((dir = opendir(fname)) == NULL)
 		return NULL;
