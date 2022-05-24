@@ -1,0 +1,17 @@
+Source: cmusfm
+Section: misc
+Priority: optional
+Maintainer: Andrey G-w <andgera@gmail.com>
+Build-Depends: debhelper-compat (= 12), dh-autoreconf,libcurl-dev, libnotify-dev
+Standards-Version: 4.5.0
+Homepage: https://github.com/Arkq/cmusfm
+Vcs-Browser: https://github.com/Arkq/cmusfm.git
+Vcs-Git: git://github.com/Arkq/cmusfm.git
+
+Package: cmusfm
+Architecture: any
+Multi-Arch: foreign
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Recommends: cmus
+Enhances: cmus
+Description: Last.fm standalone scrobbler for the cmus music player.
