@@ -2,7 +2,7 @@
 # Copyright (c) 2014-2020 Arkadiusz Bokowy
 
 AC_PREREQ([2.59])
-AC_INIT([cmusfm], [1.0.0], [arkadiusz.bokowy@gmail.com])
+AC_INIT([cmusfm], [0.4.2], [arkadiusz.bokowy@gmail.com])
 AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
 
 AC_CONFIG_HEADERS([config.h])
@@ -60,5 +60,18 @@ AM_COND_IF([ENABLE_LIBNOTIFY], [
 	AC_DEFINE([ENABLE_LIBNOTIFY], [1], [Define to 1 if libnotify is enabled.])
 ])
 
-AC_CONFIG_FILES([Makefile src/Makefile test/Makefile])
+# support for manpages
+AC_ARG_ENABLE([manpages],
+	AS_HELP_STRING([--enable-manpages], [enable building of man pages (requires rst2man)]))
+AM_CONDITIONAL([ENABLE_MANPAGES], [test "x$enable_manpages" = "xyes"])
+AM_COND_IF([ENABLE_MANPAGES], [
+	AC_PATH_PROGS([RST2MAN], [rst2man rst2man.py])
+	AS_IF([test "x$RST2MAN" = "x"], [AC_MSG_ERROR([[--enable-manpages requires rst2man]])])
+])
+
+AC_CONFIG_FILES([
+	Makefile
+	doc/Makefile
+	src/Makefile
+	test/Makefile])
 AC_OUTPUT
