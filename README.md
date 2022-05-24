@@ -80,6 +80,35 @@ mkdir build && cd build
 ../configure --enable-libnotify
 make && make install
 ```
+### Install build dependencies
+
+#### Debian/Ubuntu
+
+```shell
+sudo apt-get install build-essential pkg-config git
+```
+#### Making a .deb package
+
+Building a Debian package directly from this repository is easy. Make sure you have the build dependencies installed as described above. Be sure it all builds, then do this:
+
+```shell
+sudo apt-get install fakeroot debhelper dpkg-dev
+fakeroot dpkg-buildpackage -b -us -uc
+```
+
+You should then have a .deb package for you to install with dpkg -i.
+
+#### Making a Debian source package for a PPA
+
+The following commands require `git-buildpackage`:
+
+```shell
+git archive --format=tar HEAD | tar x && git commit -am "packaging: Makefile substitution"
+gbp dch --commit --since=HEAD --upstream-branch=master --dch-opt="-lppa" --dch-opt="-D$(lsb_release -c -s)" debian
+gbp buildpackage --git-upstream-tree=SLOPPY --git-export-dir=../build-area -S
+```
+
+You can then dput the *.changes file in `../build-area` to your PPA.
 
 ## Configuration
 
