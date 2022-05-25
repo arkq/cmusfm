@@ -123,19 +123,6 @@ char *get_album_cover_file(const char *location, const char *format) {
 	regex_t regex;
 	char *tmp;
 
-	/* chek cue image file path play  */
-	const char pattern[7] = "cue://";
-	char *location_t;
-	location_t = strdup(location);
-	int ret;
-	ret = strncmp(location, pattern, 6);
-
-	if (ret == 0) {
-		strcpy(location_t, &location[6]);
-		location = dirname(location_t);
-	}
-
-	debug("location: %s", location);
 	debug("Get cover (case-insensitive): %s", format);
 
 	if (location == NULL)
