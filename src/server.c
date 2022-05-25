@@ -1,6 +1,6 @@
 /*
  * server.c
- * Copyright (c) 2010-2021 Arkadiusz Bokowy
+ * Copyright (c) 2010-2022 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -281,7 +281,7 @@ int cmusfm_server_check(void) {
 	struct sockaddr_un saddr = { .sun_family = AF_UNIX };
 	int fd;
 
-	strcpy(saddr.sun_path, cmusfm_socket_file);
+	strncpy(saddr.sun_path, cmusfm_socket_file, sizeof(saddr.sun_path));
 
 	if ((fd = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
 		return -1;
@@ -325,7 +325,7 @@ int cmusfm_server_start(void) {
 	};
 
 	struct sockaddr_un saddr = { .sun_family = AF_UNIX };
-	strcpy(saddr.sun_path, cmusfm_socket_file);
+	strncpy(saddr.sun_path, cmusfm_socket_file, sizeof(saddr.sun_path));
 
 	if ((pfds[0].fd = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
 		return -1;
@@ -524,7 +524,8 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
 	/* connect to the communication socket */
 	struct sockaddr_un saddr = { .sun_family = AF_UNIX };
-	strcpy(saddr.sun_path, cmusfm_socket_file);
+	strncpy(saddr.sun_path, cmusfm_socket_file, sizeof(saddr.sun_path));
+
 	if ((sock = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
 		goto fail;
 	if (connect(sock, (struct sockaddr *)(&saddr), sizeof(saddr)) == -1)
