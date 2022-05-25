@@ -128,6 +128,16 @@ char *get_album_cover_file(const char *location, const char *format) {
 	if (location == NULL)
 		return NULL;
 
+	/* show cover cue image file */
+	char *location_t;
+	location_t = strdup(location);
+
+	if (strncmp(location_t, "cue://", 6) == 0) {
+		strcpy(location_t, &location[6]);
+		location = dirname(location_t);
+	debug("location: %s\n", location);
+	}
+
 	/* NOTE: We can support absolute paths only. The reason for this, is, that
 	 *       cmus might report file name according to its current directory,
 	 *       which is not known. Hence this obstruction. */
@@ -162,6 +172,7 @@ char *get_album_cover_file(const char *location, const char *format) {
 		return NULL;
 
 	debug("Cover: %s", fname);
+	free(location_t);
 	return fname;
 }
 #endif
