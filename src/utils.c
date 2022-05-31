@@ -129,13 +129,10 @@ char *get_album_cover_file(const char *location, const char *format) {
 		return NULL;
 
 	/* show cover cue image file */
-	char *location_t;
-	location_t = strdup(location);
-
-	if (strncmp(location_t, "cue://", 6) == 0) {
-		strcpy(location_t, &location[6]);
-		location = dirname(location_t);
-	debug("location: %s\n", location);
+	bool is_cue_file = false;
+	if (strncmp(location, "cue://", 6) == 0) {
+		location += 6;
+		is_cue_file = true;
 	}
 
 	/* NOTE: We can support absolute paths only. The reason for this, is, that
@@ -146,6 +143,9 @@ char *get_album_cover_file(const char *location, const char *format) {
 
 	tmp = strdup(location);
 	strcpy(fname, dirname(tmp));
+		if (is_cue_file) {
+			dirname(fname);
+	}
 	free(tmp);
 
 	if ((dir = opendir(fname)) == NULL)
@@ -172,7 +172,6 @@ char *get_album_cover_file(const char *location, const char *format) {
 		return NULL;
 
 	debug("Cover: %s", fname);
-	free(location_t);
 	return fname;
 }
 #endif
