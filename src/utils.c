@@ -143,9 +143,8 @@ char *get_album_cover_file(const char *location, const char *format) {
 
 	tmp = strdup(location);
 	strcpy(fname, dirname(tmp));
-		if (is_cue_file) {
+		if (is_cue_file)
 			dirname(fname);
-	}
 	free(tmp);
 
 	if ((dir = opendir(fname)) == NULL)
