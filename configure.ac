@@ -69,5 +69,5 @@ AM_COND_IF([ENABLE_MANPAGES], [
 	AS_IF([test "x$RST2MAN" = "x"], [AC_MSG_ERROR([[--enable-manpages requires rst2man]])])
 ])
 
-AC_CONFIG_FILES([Makefile src/Makefile test/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile test/Makefile doc/Makefile])
 AC_OUTPUT
