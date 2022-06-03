@@ -51,42 +51,6 @@ server
     to run this command.
 
 
-Cmusfm provides also one extra feature, which was mentioned earlier - desktop
-notifications. In order to have this functionality, one has to enable it during
-the compilation stage. Since it is an extra feature, it is disabled by default
-in the cmusfm configuration file too. Note, that cover art file has to be
-explicitly stored in the current track's directory - embedded covers are not
-displayed. Exemplary configuration might be as follows:
-
-* `notification = "yes"`
-* `format-coverfile = "^(cover|folder)\.jpg$"`
-
-By default cmusfm scrobbles to the Last.fm service. However, it is possible to
-change this behavior by modifying service-api-url and service-auth-url options
-in the configuration file. Afterwards, one should reinitialize cmusfm
-(`cmusfm init`) in order to authenticate with new scrobbling service. In order
-to use Libre.fm as a scrobbling service, one shall use configuration as follows:
-
-* `service-api-url = "https://libre.fm/2.0/"`
-* `service-auth-url = "https://libre.fm/api/auth"`
-
-
-CONFIGURATION
-=============
-Before usage with the cmus music player, one has to grant access for the cmusfm
-in the Last.fm service. To do so, simply run cmusfm with the init argument and
-follow the instruction. This action might be also required when upgrading to the
-newer version with new features.
-
-`cmusfm init`
-
-After that you can safely edit `~/.config/cmus/cmusfm.conf` configuration file.
-As a final step (after the access is granted in the Last.fm service) one should
-set cmusfm as a status display program for cmus. This can be done by starting
-cmus and typing in the main window:
-
-`:set status_display_program=cmusfm`
-
 FILES
 =====
 
