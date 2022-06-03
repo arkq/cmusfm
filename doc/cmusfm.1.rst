@@ -21,16 +21,34 @@ DESCRIPTION
 
 **cmusfm** is a standalone Last.fm scrobbler for ``cmus(1)`` music player.
 
-OPTIONS
-=======
+COMMANDS
+========
 
-int
-    One has to grant access for the cmusfm in the Last.fm service. This
-    actionmight be also required when upgrading to the newer version with new
-    features.
+init
+    Initialize **cmusfm**.
+
+    This command will try to grant access to your Last.fm account. On a
+    subsequent run it will check whether access to Last.fm account is still
+    valid. In case of failure, it will prompt you to grant access. Running
+    this command might also be necessary to reinitialize configuration in
+    case of **cmusfm** upgrade.
+
+    After successful initialization, **cmusfm** will store your Last.fm
+    credentials in the ``~/.cmusfm/cmus/cmusfm.conf`` configuration file.
+    See the FILES_ section for details.
+
+    As a final step it is necessary to set **cmusfm** as a status display
+    program for ``cmus(1)``. This can be done by starting **cmus** and typing
+    in the main window:
+
+    ``:set status_display_program=cmusfm``
 
 server
-    Show cmusfm string.
+    Manually run **cmusfm** server.
+
+    This command is useful when you want to debug **cmusfm**. During normal
+    operation, **cmusfm** server is started automatically, so you don't need
+    to run this command.
 
 DESCRIPTION
 ===========
