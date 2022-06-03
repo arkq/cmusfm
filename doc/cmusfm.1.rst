@@ -34,7 +34,7 @@ init
     case of **cmusfm** upgrade.
 
     After successful initialization, **cmusfm** will store your Last.fm
-    credentials in the ``~/.cmusfm/cmus/cmusfm.conf`` configuration file.
+    credentials in the ``~/.config/cmus/cmusfm.conf`` configuration file.
     See the FILES_ section for details.
 
     As a final step it is necessary to set **cmusfm** as a status display
