@@ -89,8 +89,47 @@ cmus and typing in the main window:
 
 FILES
 =====
-`~/.config/cmus/cmusfm.conf` cmusfm configuration file.
 
+~/.config/cmus/cmusfm.conf
+    **cmusfm** configuration file.
+
+    Available configuration options:
+
+    * **format-localfile** - regular expression used for parsing local file
+      names (default: ``"^(?A.+) - (?T.+)\.[^.]+$"``)
+    * **format-shoutcast** - regular expression used for parsing shoutcast
+      stream names (default: ``"^(?A.+) - (?T.+)$"``)
+
+    * **now-playing-localfile** - report now-playing status for local files
+      (default: ``"yes"``)
+    * **now-playing-shoutcast** - report now-playing status for shoutcast
+      streams (default: ``"yes"``)
+    * **submit-localfile** - submit local files to Last.fm (default: ``"yes"``)
+    * **submit-shoutcast** - submit shoutcast streams to Last.fm (default:
+      ``"yes"``)
+
+    * **notification** - show desktop notification when scrobbling
+      (default: ``"no"``)
+    * **format-coverfile** - regular expression used for matching cover file
+      names (default: ``"^(cover|folder)\.jpg$"``)
+
+    * **service-api-url** - URL of the Last.fm API service (default:
+      ``"https://ws.audioscrobbler.com/2.0/"``); after changing this
+      configuration option, you might need to reinitialize **cmusfm**.
+    * **service-auth-url** - URL of the Last.fm authentication service
+      (default: ``"https://www.last.fm/api/auth/"``); after changing this
+      configuration option, you might need to reinitialize **cmusfm**.
+
+    Available regexp matching patterns:
+
+    * **(?A...)** - match artist name
+    * **(?B...)** - match album name
+    * **(?N...)** - match track number
+    * **(?T...)** - match track title
+
+    All matching patterns can be used only once. Otherwise only the first
+    occurrence will be used. Also note, that using matched subexpressions
+    without the extension notation might result in an unexpected behavior.
 
 SEE ALSO
 ========
