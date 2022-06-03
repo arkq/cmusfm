@@ -131,17 +131,18 @@ FILES
     occurrence will be used. Also note, that using matched subexpressions
     without the extension notation might result in an unexpected behavior.
 
-SEE ALSO
-========
-
-``cmusfm(1)``, ``cmus-remote(1)``, ``cmus-tutorial(7)``
-
-Project web site at https://github.com/Arkq/cmusfm
-
 COPYRIGHT
 =========
 
 Copyright (c) 2014-2022 Arkadiusz Bokowy.
 
-The cmusfm project is licensed under the terms of the distributed under the
-GNU General Public License.
+The cmusfm project is licensed and distributed under the terms of the GNU
+General Public License.
+
+SEE ALSO
+========
+
+``cmus(1)``, ``cmus-remote(1)``, ``cmus-tutorial(7)``
+
+Project web site
+  https://github.com/Arkq/cmusfm
