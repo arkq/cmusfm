@@ -50,53 +50,6 @@ server
     operation, **cmusfm** server is started automatically, so you don't need
     to run this command.
 
-DESCRIPTION
-===========
-
-**cmusfm** is an Open Source tool Last.fm standalone scrobbler for the cmus
-music player.
-
-**Features**
-
-* Listening now notification support
-* Off-line played track cache for later submission
-* POSIX ERE-based file name parser
-* Desktop notification support (optionally)
-* Customizable scrobbling service
-* Small memory footprint
-
-**Overview**
-
-When discography is correctly tagged - at least artist and title field -
-scrobbling needs no further configuration (see: CONFIGURATION_). However, if this
-requirement is not met, then one can use POSIX ERE-based file name parser feature.
-But what the heck is this?
-
-Cmusfm allows to configure regular expression patterns for local files and for
-shoutcast streaming services. The syntax is compatible with the POSIX Extended
-Regular Expression (ERE) with one exception. Matched subexpression has to be
-marked with the ? extension notation. There are four distinguish types:
-
-* `(?A...)` - match artist name
-* `(?B...)` - match album name
-* `(?N...)` - match track number
-* `(?T...)` - match track title
-
-All extension types can be used only once, otherwise only the first occurrence
-will be used. Also note, that using matched subexpressions without the extension
-notation might result in an unexpected behavior. Default configuration assumes
-formats as follows:
-
-* `format-localfile = "^(?A.+) - (?T.+)\.[^.]+$"` (matches: The Beatles - Yellow Submarine.ogg)
-* `format-shoutcast = "^(?A.+) - (?T.+)$"` (matches: The Beatles - Yellow Submarine)
-
-Scrobbling behavior and now playing notification can be controlled via the
-following self-explainable options (default is "yes" for all of them):
-
-* `now-playing-localfile = "yes"`
-* `now-playing-shoutcast = "no"`
-* `submit-localfile = "yes"`
-* `submit-shoutcast = "no"`
 
 Cmusfm provides also one extra feature, which was mentioned earlier - desktop
 notifications. In order to have this functionality, one has to enable it during
