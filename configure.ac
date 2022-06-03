@@ -60,7 +60,7 @@ AM_COND_IF([ENABLE_LIBNOTIFY], [
 	AC_DEFINE([ENABLE_LIBNOTIFY], [1], [Define to 1 if libnotify is enabled.])
 ])
 
-# support manpages
+# support for manpages
 AC_ARG_ENABLE([manpages],
 	AS_HELP_STRING([--enable-manpages], [enable building of man pages (requires rst2man)]))
 AM_CONDITIONAL([ENABLE_MANPAGES], [test "x$enable_manpages" = "xyes"])
