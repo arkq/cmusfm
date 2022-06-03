@@ -14,7 +14,12 @@ Last.fm scrobbler for cmus music player
 SYNOPSIS
 ========
 
-**cmusfm** [*OPTION*]
+**cmusfm** *COMMAND*
+
+DESCRIPTION
+===========
+
+**cmusfm** is a standalone Last.fm scrobbler for ``cmus(1)`` music player.
 
 OPTIONS
 =======
