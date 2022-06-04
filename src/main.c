@@ -1,6 +1,6 @@
 /*
  * main.c
- * Copyright (c) 2010-2018 Arkadiusz Bokowy
+ * Copyright (c) 2010-2022 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -25,9 +25,12 @@
 #include "cmusfm.h"
 
 #include <errno.h>
+#include <spawn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include "cache.h"
@@ -110,9 +113,27 @@ static struct cmtrack_info *get_track_info(int argc, char *argv[]) {
 
 /* User authorization callback for the initialization process. */
 static int user_authorization(const char *url) {
+
 	printf("Grant access to your Last.fm account using the link below,"
 			" then press ENTER:\n  %s\n", url);
+
+#ifdef __APPLE__
+	char *cmd = "open";
+	char * const argv[] = { cmd, (char *)url, NULL };
+#else
+	char *cmd = "xdg-open";
+	char * const argv[] = { cmd, (char *)url, NULL };
+#endif
+
+	pid_t pid;
+	int status;
+
+	/* spawn "open" command and forget */
+	if (posix_spawnp(&pid, cmd, NULL, NULL, argv, NULL) == 0)
+		waitpid(pid, &status, WNOHANG);
+
 	getchar();
+
 	return 0;
 }
 
