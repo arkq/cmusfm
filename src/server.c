@@ -281,7 +281,7 @@ int cmusfm_server_check(void) {
 	struct sockaddr_un saddr = { .sun_family = AF_UNIX };
 	int fd;
 
-	strncpy(saddr.sun_path, cmusfm_socket_file, sizeof(saddr.sun_path));
+	strncpy(saddr.sun_path, cmusfm_socket_file, sizeof(saddr.sun_path) - 1);
 
 	if ((fd = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
 		return -1;
@@ -325,7 +325,7 @@ int cmusfm_server_start(void) {
 	};
 
 	struct sockaddr_un saddr = { .sun_family = AF_UNIX };
-	strncpy(saddr.sun_path, cmusfm_socket_file, sizeof(saddr.sun_path));
+	strncpy(saddr.sun_path, cmusfm_socket_file, sizeof(saddr.sun_path) - 1);
 
 	if ((pfds[0].fd = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
 		return -1;
@@ -524,7 +524,7 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 
 	/* connect to the communication socket */
 	struct sockaddr_un saddr = { .sun_family = AF_UNIX };
-	strncpy(saddr.sun_path, cmusfm_socket_file, sizeof(saddr.sun_path));
+	strncpy(saddr.sun_path, cmusfm_socket_file, sizeof(saddr.sun_path) - 1);
 
 	if ((sock = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
 		goto fail;

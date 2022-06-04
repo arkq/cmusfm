@@ -157,6 +157,9 @@ static void cmusfm_initialization(void) {
 	if (cmusfm_config_read(cmusfm_config_file, &conf) == 0)
 		check_prev_session = true;
 
+	if (strlen(conf.user_name) == 0)
+		check_prev_session = false;
+
 	sbs = scrobbler_initialize(conf.service_api_url,
 			conf.service_auth_url, SC_api_key, SC_secret);
 
@@ -177,8 +180,8 @@ static void cmusfm_initialization(void) {
 
 	if (fetch_new_session) {
 		if (scrobbler_authentication(sbs, user_authorization) == 0) {
-			strncpy(conf.user_name, sbs->user_name, sizeof(conf.user_name) - 1);
-			strncpy(conf.session_key, sbs->session_key, sizeof(conf.session_key) - 1);
+			strncpy(conf.user_name, sbs->user_name, sizeof(conf.user_name));
+			strncpy(conf.session_key, sbs->session_key, sizeof(conf.session_key));
 		}
 		else
 			printf("Error: %s\n", scrobbler_strerror(sbs));

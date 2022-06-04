@@ -257,6 +257,8 @@ static char *sb_make_curl_request_string(
 	if ((tmp = strstr(tmp, sbs->session_key)) != NULL)
 		memset(tmp, 'x', strlen(sbs->session_key));
 	debug("Request: %s", tmp_str);
+#else
+	(void)sbs;
 #endif
 
 	return dest;
