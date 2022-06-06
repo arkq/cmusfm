@@ -53,6 +53,8 @@ const char *cmusfm_socket_file = NULL;
 /* Global configuration structure */
 struct cmusfm_config config;
 
+/* Access global environment variables */
+extern char **environ;
 
 /* Parse status arguments which we've get from the cmus and return track info
  * structure. Upon error NULL is returned and errno is set appropriately. */
@@ -121,7 +123,7 @@ static int user_authorization(const char *url) {
 	char *cmd = "open";
 	char * const argv[] = { cmd, (char *)url, NULL };
 #else
-	char *cmd = "xdg-open";
+	char *cmd = "x-www-browser";
 	char * const argv[] = { cmd, (char *)url, NULL };
 #endif
 
@@ -129,7 +131,7 @@ static int user_authorization(const char *url) {
 	int status;
 
 	/* spawn "open" command and forget */
-	if (posix_spawnp(&pid, cmd, NULL, NULL, argv, NULL) == 0)
+	if (posix_spawnp(&pid, cmd, NULL, NULL, argv, environ) == 0)
 		waitpid(pid, &status, WNOHANG);
 
 	getchar();
