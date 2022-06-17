@@ -82,6 +82,13 @@ static struct cmusfm_cache_record *get_cache_record(const scrobbler_trackinfo_t 
 
 	/* enlarge allocated memory for string data payload */
 	record = (struct cmusfm_cache_record *)realloc(record, get_cache_record_size(record));
+
+	if (record == NULL) {
+		perror("ERROR: error enlarge allocated memory");
+		free(record);
+		exit(EXIT_FAILURE);
+	}
+
 	ptr = (char *)&record[1];
 
 	if (record->len_artist) {
