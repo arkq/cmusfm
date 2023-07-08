@@ -3,29 +3,25 @@ on:
   push:
   pull_request:
     branches: [ master ]
+permissions:
+  actions: read
+  contents: read
+  security-events: write
 jobs:
   analyze:
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    strategy:
-      matrix:
-        language: [ 'cpp' ]
-      fail-fast: false
     runs-on: ubuntu-latest
     steps:
     - name: Install Dependencies
-      run: |
-        sudo apt update
-        sudo apt install --yes --quiet --no-install-recommends \
-          libcurl4-openssl-dev \
-          libnotify-dev
-    - uses: actions/checkout@v2
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v1
+      uses: awalsh128/cache-apt-pkgs-action@v1
       with:
-        languages: ${{ matrix.language }}
+        packages: >
+          libcurl4-openssl-dev
+          libnotify-dev
+    - uses: actions/checkout@v3
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: cpp
         queries: security-and-quality
     - name: Create Build Environment
       run: |
@@ -40,4 +36,4 @@ jobs:
       working-directory: ${{ github.workspace }}/build
       run: make
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v1
+      uses: github/codeql-action/analyze@v2

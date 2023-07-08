@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         os:
-        - ubuntu-18.04
+        - ubuntu-20.04
         - ubuntu-latest
         features:
         - --enable-debug --enable-manpages
@@ -17,13 +17,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Install Dependencies
-      run: |
-        sudo apt update
-        sudo apt install --yes --quiet --no-install-recommends \
-          libcurl4-openssl-dev \
-          libnotify-dev \
-          python-docutils
-    - uses: actions/checkout@v2
+      uses: awalsh128/cache-apt-pkgs-action@v1
+      with:
+        packages: >
+          libcurl4-openssl-dev
+          libnotify-dev
+          python3-docutils
+    - uses: actions/checkout@v3
     - name: Create Build Environment
       run: |
         mkdir -p ${{ github.workspace }}/build
