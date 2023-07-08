@@ -1,6 +1,6 @@
 /*
  * libscrobbler2.c
- * Copyright (c) 2011-2021 Arkadiusz Bokowy
+ * Copyright (c) 2011-2023 Arkadiusz Bokowy
  *
  * This file is a part of cmusfm.
  *
@@ -102,7 +102,10 @@ static CURL *sb_curl_init(CURLoption method, struct sb_response_data *response) 
 	curl_easy_setopt(curl, CURLOPT_POSTREDIR, CURL_REDIR_POST_ALL);
 #endif
 
-#if LIBCURL_VERSION_NUM >= 0x071304 /* 7.19.4 */
+#if LIBCURL_VERSION_NUM >= 0x075500 /* 7.85.0 */
+	curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "http,https");
+	curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS_STR, "http,https");
+#elif LIBCURL_VERSION_NUM >= 0x071304 /* 7.19.4 */
 	curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
 	curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
 #endif
