@@ -63,6 +63,9 @@ static struct cmusfm_cache_record *get_cache_record(const scrobbler_trackinfo_t 
 
 	/* allocate memory for the initial record data (header) */
 	record = (struct cmusfm_cache_record *)calloc(1, sizeof(*record));
+	if (record == NULL) {
+		return NULL;
+	}
 
 	record->signature = CMUSFM_CACHE_SIGNATURE;
 	record->timestamp = sb_tinf->timestamp;
@@ -81,7 +84,12 @@ static struct cmusfm_cache_record *get_cache_record(const scrobbler_trackinfo_t 
 		record->len_mb_track_id = strlen(sb_tinf->mb_track_id) + 1;
 
 	/* enlarge allocated memory for string data payload */
-	record = (struct cmusfm_cache_record *)realloc(record, get_cache_record_size(record));
+	struct cmusfm_cache_record *tmp = record;
+	if ((record = realloc(tmp, get_cache_record_size(record))) == NULL) {
+		free(tmp);
+		return NULL;
+	}
+
 	ptr = (char *)&record[1];
 
 	if (record->len_artist) {
