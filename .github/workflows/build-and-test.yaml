@@ -23,7 +23,7 @@ jobs:
           libcurl4-openssl-dev
           libnotify-dev
           python3-docutils
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Create Build Environment
       run: |
         mkdir -p ${{ github.workspace }}/build
