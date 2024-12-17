@@ -7,14 +7,11 @@ jobs:
   build:
     strategy:
       matrix:
-        os:
-        - ubuntu-20.04
-        - ubuntu-latest
         features:
         - --enable-debug --enable-manpages
         - --enable-libnotify
       fail-fast: false
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
     - name: Install Dependencies
       uses: awalsh128/cache-apt-pkgs-action@v1
@@ -23,7 +20,7 @@ jobs:
           libcurl4-openssl-dev
           libnotify-dev
           python3-docutils
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Create Build Environment
       run: |
         mkdir -p ${{ github.workspace }}/build
