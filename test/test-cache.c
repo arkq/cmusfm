@@ -1,9 +1,7 @@
 /*
- * test-cache.c
- * Copyright (c) 2015-2018 Arkadiusz Bokowy
- *
- * This file is a part of cmusfm.
- *
+ * cmusfm - test-cache.c
+ * SPDX-FileCopyrightText: 2015-2024 Arkadiusz Bokowy and contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 #include <assert.h>

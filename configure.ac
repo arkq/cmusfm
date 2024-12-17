@@ -1,5 +1,6 @@
 # cmusfm - configure.ac
-# Copyright (c) 2014-2020 Arkadiusz Bokowy
+# SPDX-FileCopyrightText: 2014-2024 Arkadiusz Bokowy and contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 AC_PREREQ([2.59])
 AC_INIT([cmusfm], [0.4.2], [arkadiusz.bokowy@gmail.com])

@@ -2,7 +2,7 @@
 
 [Last.fm](http://www.last.fm/) standalone scrobbler for the [cmus](https://cmus.github.io/) music player.
 
-[![Build Status](https://github.com/Arkq/cmusfm/actions/workflows/build-and-test.yaml/badge.svg)](https://github.com/Arkq/cmusfm/actions/workflows/build-and-test.yaml)
+[![Build Status](https://github.com/arkq/cmusfm/actions/workflows/build-and-test.yaml/badge.svg)](https://github.com/arkq/cmusfm/actions/workflows/build-and-test.yaml)
 
 ## Features
 

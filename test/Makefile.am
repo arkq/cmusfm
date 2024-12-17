@@ -1,5 +1,6 @@
 # cmusfm - Makefile.am
-# Copyright (c) 2015-2018 Arkadiusz Bokowy
+# SPDX-FileCopyrightText: 2015-2024 Arkadiusz Bokowy and contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 TESTS = \
 	test-cache \

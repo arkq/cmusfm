@@ -1,10 +1,9 @@
 /*
- * test-server.inc
+ * cmusfm - test-server.inc
  * vim: ft=c
  *
- * Copyright (c) 2015-2017 Arkadiusz Bokowy
- *
- * This file is a part of cmusfm.
+ * SPDX-FileCopyrightText: 2015-2024 Arkadiusz Bokowy and contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
  */
 

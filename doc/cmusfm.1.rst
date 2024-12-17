@@ -107,4 +107,4 @@ SEE ALSO
 ``cmus(1)``, ``cmus-remote(1)``, ``cmus-tutorial(7)``
 
 Project web site
-  https://github.com/Arkq/cmusfm
+  https://github.com/arkq/cmusfm

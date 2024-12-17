@@ -1,0 +1,12 @@
+# cmusfm - dependabot.yaml
+# SPDX-FileCopyrightText: 2024 Arkadiusz Bokowy and contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+version: 2
+updates:
+
+  # Check for updates to GitHub Actions every week
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
