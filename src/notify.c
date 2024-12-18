@@ -8,6 +8,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+
+#include <glib.h>
 #include <libnotify/notify.h>
 
 #include "debug.h"
@@ -68,6 +70,8 @@ void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon) 
 	else
 		cmus_notify = notify_notification_new(track, body, icon);
 
+	free(body);
+
 	if (!notify_notification_show(cmus_notify, &error)) {
 		debug("Desktop notify error: %s", error->message);
 		g_error_free(error);
@@ -77,8 +81,6 @@ void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon) 
 		cmusfm_notify_free();
 	}
 
-	if (body != NULL)
-		free(body);
 }
 
 /* Initialize notification system. */

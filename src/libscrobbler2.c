@@ -455,7 +455,7 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	token_hex[32] = '\0';
 
 	/* perform user authorization (callback function) */
-	sprintf(get_url, "%s?api_key=%s&token=%s",
+	snprintf(get_url, sizeof(get_url), "%s?api_key=%s&token=%s",
 			sbs->auth_url, api_key_hex, token_hex);
 	if (callback(get_url) != 0) {
 		sb_curl_cleanup(curl, &response);

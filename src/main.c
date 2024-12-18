@@ -180,25 +180,6 @@ static void cmusfm_initialization(void) {
 		printf("Error: unable to write file: %s\n", cmusfm_config_file);
 }
 
-/* Spawn server process of cmusfm by simply forking ourself and exec with
- * special "server" argument. */
-static void cmusfm_spawn_server_process(const char *cmusfm) {
-
-	pid_t pid;
-
-	if ((pid = fork()) == -1) {
-		perror("ERROR: Fork server");
-		exit(EXIT_FAILURE);
-	}
-
-	if (pid == 0) {
-		execlp(cmusfm, cmusfm, "server", NULL);
-		perror("ERROR: Exec server");
-		exit(EXIT_FAILURE);
-	}
-
-}
-
 int main(int argc, char *argv[]) {
 
 	struct cmtrack_info *tinfo;
@@ -237,8 +218,19 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (cmusfm_server_check() == 0) {
-		cmusfm_spawn_server_process(argv[0]);
+
+		pid_t pid;
+		if ((pid = fork()) == -1) {
+			perror("ERROR: Fork server");
+			return EXIT_FAILURE;
+		}
+
+		if (pid == 0)
+			return cmusfm_server_start();
+
+		/* wait for the server to start */
 		sleep(1);
+
 	}
 
 	if (cmusfm_server_send_track(tinfo) != 0) {
