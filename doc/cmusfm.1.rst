@@ -1,3 +1,6 @@
+.. SPDX-FileCopyrightText: 2014-2024 Arkadiusz Bokowy and contributors
+.. SPDX-License-Identifier: GPL-3.0-or-later
+
 ======
 cmusfm
 ======
@@ -92,14 +95,6 @@ FILES
     occurrence will be used. Note, that using matched subgroups without
     the extension notation (e.g.: ``(.+)``) might result in an unexpected
     behavior.
-
-COPYRIGHT
-=========
-
-Copyright (c) 2014-2022 Arkadiusz Bokowy.
-
-The cmusfm project is licensed and distributed under the terms of the GNU
-General Public License.
 
 SEE ALSO
 ========

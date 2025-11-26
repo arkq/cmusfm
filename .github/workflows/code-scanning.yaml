@@ -1,25 +1,32 @@
-name: CodeQL Analysis
+# SPDX-FileCopyrightText: 2014-2024 Arkadiusz Bokowy and contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+name: Code Scanning
+
 on:
   push:
   pull_request:
     branches: [ master ]
+
 permissions:
   actions: read
   contents: read
   security-events: write
+
 jobs:
-  analyze:
+
+  code-ql:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v6
     - name: Install Dependencies
       uses: awalsh128/cache-apt-pkgs-action@v1
       with:
         packages: >
           libcurl4-openssl-dev
           libnotify-dev
-    - uses: actions/checkout@v4
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@v4
       with:
         languages: cpp
         queries: security-and-quality
@@ -36,4 +43,11 @@ jobs:
       working-directory: ${{ github.workspace }}/build
       run: make
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@v4
+
+  reuse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: REUSE Compliance Check
+        uses: fsfe/reuse-action@v6

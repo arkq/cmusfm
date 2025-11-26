@@ -1,4 +1,7 @@
 /*
+ * SPDX-FileCopyrightText: 2001 Alexander Peslyak <solar at openwall.com>
+ * SPDX-License-Identifier: CC0-1.0
+ *
  * This is an OpenSSL-compatible implementation of the RSA Data Security, Inc.
  * MD5 Message-Digest Algorithm (RFC 1321).
  *

@@ -1,8 +1,14 @@
+<!--
+SPDX-FileCopyrightText: 2014-2024 Arkadiusz Bokowy and contributors
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 # cmusfm
 
 [Last.fm](http://www.last.fm/) standalone scrobbler for the [cmus](https://cmus.github.io/) music player.
 
 [![Build Status](https://github.com/arkq/cmusfm/actions/workflows/build-and-test.yaml/badge.svg)](https://github.com/arkq/cmusfm/actions/workflows/build-and-test.yaml)
+[![REUSE status](https://api.reuse.software/badge/github.com/arkq/cmusfm)](https://api.reuse.software/info/github.com/arkq/cmusfm)
 
 ## Features
 
