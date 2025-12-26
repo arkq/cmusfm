@@ -225,8 +225,28 @@ int main(int argc, char *argv[]) {
 			return EXIT_FAILURE;
 		}
 
-		if (pid == 0)
-			return cmusfm_server_start();
+		if (pid == 0) {
+			/* Server process - restart on error */
+			int restart_count = 0;
+			const int max_restarts = 5;
+			int delay = 1; /* Start with 1 second delay */
+
+			while (restart_count < max_restarts) {
+				int result = cmusfm_server_start();
+				if (result == 0) {
+					/* Normal exit (shutdown signal) */
+					return EXIT_SUCCESS;
+				}
+				/* Server crashed - restart with backoff */
+				restart_count++;
+				if (restart_count < max_restarts) {
+					sleep(delay);
+					delay = delay * 2;
+				}
+			}
+			/* Too many restarts - give up */
+			return EXIT_FAILURE;
+		}
 
 		/* wait for the server to start */
 		sleep(1);
@@ -234,8 +254,25 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (cmusfm_server_send_track(tinfo) != 0) {
-		perror("ERROR: Send track");
-		return EXIT_FAILURE;
+		/* If send fails, server might have crashed - try to restart */
+		if (cmusfm_server_check() == 0) {
+			pid_t pid;
+			if ((pid = fork()) == -1) {
+				perror("ERROR: Fork server (retry)");
+				return EXIT_FAILURE;
+			}
+			if (pid == 0)
+				return cmusfm_server_start();
+			sleep(1);
+			/* Retry sending track */
+			if (cmusfm_server_send_track(tinfo) != 0) {
+				perror("ERROR: Send track (after restart)");
+				return EXIT_FAILURE;
+			}
+		} else {
+			perror("ERROR: Send track");
+			return EXIT_FAILURE;
+		}
 	}
 
 	return EXIT_SUCCESS;
