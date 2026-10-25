@@ -1,5 +1,11 @@
-# SPDX-FileCopyrightText: 2014-2024 Arkadiusz Bokowy and contributors
+# SPDX-FileCopyrightText: 2014-2026 Arkadiusz Bokowy and contributors
 # SPDX-License-Identifier: CC0-1.0
+
+# Build directory
+/build*/
+
+# Prerequisites
+*.d
 
 # Object files
 *.o
@@ -7,9 +13,20 @@
 *.obj
 *.elf
 
+# Linker output
+*.ilk
+*.map
+*.exp
+
+# Precompiled Headers
+*.gch
+*.pch
+
 # Libraries
 *.lib
 *.a
+*.la
+*.lo
 
 # Shared objects (inc. Windows DLLs)
 *.dll
@@ -25,21 +42,21 @@
 *.x86_64
 *.hex
 
-# Autotools
-/autom4te.cache/
-/build*/
-/m4/
-/aclocal.m4
-/ar-lib
-/compile
-/config.guess
-/config.sub
-/configure
-/depcomp
-/install-sh
-/ltmain.sh
-/missing
-/test-driver
-Makefile.in
-config.h.in
-*~
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# CMake
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps

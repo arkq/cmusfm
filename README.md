@@ -69,7 +69,6 @@ shall use configuration as follows:
 * `service-api-url = "https://libre.fm/2.0/"`
 * `service-auth-url = "https://libre.fm/api/auth"`
 
-
 ## Installation
 
 ### Dependencies
@@ -81,10 +80,9 @@ shall use configuration as follows:
 ### Building and install
 
 ```shell
-autoreconf --install
-mkdir build && cd build
-../configure --enable-libnotify
-make && make install
+cmake -S . -B build -DENABLE_LIBNOTIFY=ON
+cmake --build build
+sudo cmake --install build
 ```
 
 ## Configuration

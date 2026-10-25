@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2014-2024 Arkadiusz Bokowy and contributors
+# SPDX-FileCopyrightText: 2014-2026 Arkadiusz Bokowy and contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 name: Code Scanning
@@ -18,32 +18,24 @@ jobs:
   code-ql:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
-    - name: Install Dependencies
-      uses: awalsh128/cache-apt-pkgs-action@v1
-      with:
-        packages: >
-          libcurl4-openssl-dev
-          libnotify-dev
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4
-      with:
-        languages: cpp
-        queries: security-and-quality
-    - name: Create Build Environment
-      run: |
-        mkdir -p ${{ github.workspace }}/build
-        autoreconf --install
-    - name: Configure GNU Automake
-      working-directory: ${{ github.workspace }}/build
-      run: |
-        ${{ github.workspace }}/configure \
-          --enable-libnotify
-    - name: Build
-      working-directory: ${{ github.workspace }}/build
-      run: make
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4
+      - uses: actions/checkout@v6
+      - name: Install Dependencies
+        uses: gerlero/apt-install@v1
+        with:
+          packages: >
+            libcurl4-openssl-dev
+            libnotify-dev
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: cpp
+          queries: security-and-quality
+      - name: Configure CMake
+        run: cmake -S . -B build -DENABLE_LIBNOTIFY=ON
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
 
   reuse:
     runs-on: ubuntu-latest

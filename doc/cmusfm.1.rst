@@ -12,7 +12,7 @@ Last.fm scrobbler for cmus music player
 :Date: June 2022
 :Manual section: 1
 :Manual group: General Commands Manual
-:Version: $VERSION$
+:Version: @PROJECT_VERSION@
 
 SYNOPSIS
 ========
