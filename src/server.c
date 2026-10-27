@@ -343,11 +343,30 @@ int cmusfm_server_start(void) {
 	debug("Entering server main loop");
 	while (server_on) {
 
-		if (poll(pfds, 3, -1) == -1)
-			break;  /* signal interruption */
+		int poll_result = poll(pfds, 3, -1);
+		if (poll_result == -1) {
+			if (errno == EINTR) {
+				/* Interrupted by signal, continue loop */
+				continue;
+			}
+			/* Other poll errors - log and exit */
+			debug("Poll error: %s", strerror(errno));
+			retval = -1;
+			break;
+		}
 
 		if (pfds[0].revents & POLLIN) {
+			/* Close previous client connection if any */
+			if (pfds[1].fd != -1) {
+				debug("Closing previous client connection: %d", pfds[1].fd);
+				close(pfds[1].fd);
+			}
 			pfds[1].fd = accept(pfds[0].fd, NULL, NULL);
+			if (pfds[1].fd == -1) {
+				debug("Accept error: %s", strerror(errno));
+				/* Continue loop even if accept fails */
+				continue;
+			}
 			debug("New client accepted: %d", pfds[1].fd);
 		}
 
@@ -355,18 +374,24 @@ int cmusfm_server_start(void) {
 			rd_len = read(pfds[1].fd, buffer, sizeof(buffer));
 			close(pfds[1].fd);
 			pfds[1].fd = -1;
-			if (rd_len >= sizeof(struct cmusfm_data_record))
+			if (rd_len > 0 && rd_len >= sizeof(struct cmusfm_data_record))
 				cmusfm_server_process_data(sbs, (struct cmusfm_data_record *)buffer);
+			else if (rd_len < 0)
+				debug("Read error: %s", strerror(errno));
 		}
 
 #if HAVE_SYS_INOTIFY_H
 		if (pfds[2].revents & POLLIN) {
 			/* We're watching only one file, so the result is of no importance
 			 * to us, simply read out the inotify file descriptor. */
-			read(pfds[2].fd, &inot_even, sizeof(inot_even));
-			debug("Inotify event occurred: %x", inot_even.mask);
-			cmusfm_config_read(cmusfm_config_file, &config);
-			cmusfm_config_add_watch(pfds[2].fd);
+			ssize_t inot_read = read(pfds[2].fd, &inot_even, sizeof(inot_even));
+			if (inot_read > 0) {
+				debug("Inotify event occurred: %x", inot_even.mask);
+				cmusfm_config_read(cmusfm_config_file, &config);
+				cmusfm_config_add_watch(pfds[2].fd);
+			} else if (inot_read < 0) {
+				debug("Inotify read error: %s", strerror(errno));
+			}
 		}
 #endif
 	}
