@@ -18,9 +18,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <unistd.h>
+
 #if HAVE_SYS_INOTIFY_H
 # include <sys/inotify.h>
 #endif
@@ -29,60 +30,61 @@
 #include "cmusfm.h"
 #include "config.h"
 #include "debug.h"
+
 #if ENABLE_LIBNOTIFY
 # include "notify.h"
 #endif
 
 
 /* Helper function for MB track ID retrieval. */
-static char *get_record_mb_track_id(const struct cmusfm_data_record *r) {
+static char * get_record_mb_track_id(const struct cmusfm_data_record * r) {
 	return (char *)(r + 1);
 }
 
 /* Helper function for artist retrieval. */
-static char *get_record_artist(const struct cmusfm_data_record *r) {
+static char * get_record_artist(const struct cmusfm_data_record * r) {
 	return &((char *)(r + 1))[r->off_artist];
 }
 
 /* Helper function for album artist retrieval. */
-static char *get_record_album_artist(const struct cmusfm_data_record *r) {
+static char * get_record_album_artist(const struct cmusfm_data_record * r) {
 	return &((char *)(r + 1))[r->off_album_artist];
 }
 
 /* Helper function for album name retrieval. */
-static char *get_record_album(const struct cmusfm_data_record *r) {
+static char * get_record_album(const struct cmusfm_data_record * r) {
 	return &((char *)(r + 1))[r->off_album];
 }
 
 /* Helper function for track title retrieval. */
-static char *get_record_title(const struct cmusfm_data_record *r) {
+static char * get_record_title(const struct cmusfm_data_record * r) {
 	return &((char *)(r + 1))[r->off_title];
 }
 
 /* Helper function for location retrieval. */
-static char *get_record_location(const struct cmusfm_data_record *r) {
+static char * get_record_location(const struct cmusfm_data_record * r) {
 	return &((char *)(r + 1))[r->off_location];
 }
 
 /* Return the checksum for the length-invariant part of the record. */
-static uint8_t make_record_checksum1(const struct cmusfm_data_record *r) {
-	return make_data_hash((unsigned char *)&r->status,
-			sizeof(*r) - ((char *)&r->status - (char *)r));
+static uint8_t make_record_checksum1(const struct cmusfm_data_record * r) {
+	size_t len = sizeof(*r) - ((char *)&r->status - (char *)r);
+	return make_data_hash(&r->status, len);
 }
 
 /* Return the data checksum of the given record structure. This checksum
  * does not include status field, so it can be used for data comparison. */
-static uint8_t make_record_checksum2(const struct cmusfm_data_record *r) {
-	return make_data_hash((unsigned char *)&r->disc_number,
-			sizeof(*r) - ((char *)&r->disc_number - (char *)r) +
-			r->off_location + strlen(get_record_location(r)));
+static uint8_t make_record_checksum2(const struct cmusfm_data_record * r) {
+	size_t len = sizeof(*r) - ((char *)&r->disc_number - (char *)r) + r->off_location +
+	             strlen(get_record_location(r));
+	return make_data_hash(&r->disc_number, len);
 }
 
 /* Copy data from the message into the scrobbler structure. */
-static void set_trackinfo(scrobbler_trackinfo_t *sbt,
-		const struct cmusfm_data_record *record) {
+static void set_trackinfo(scrobbler_trackinfo_t * sbt,
+		const struct cmusfm_data_record * record) {
 
-	char *tmp;
+	char * tmp;
 
 	tmp = get_record_mb_track_id(record);
 	sbt->mb_track_id = tmp[0] != '\0' ? tmp : NULL;
@@ -101,12 +103,12 @@ static void set_trackinfo(scrobbler_trackinfo_t *sbt,
 }
 
 /* Process real server task - Last.fm submission. */
-static void cmusfm_server_process_data(scrobbler_session_t *sbs,
-		const struct cmusfm_data_record *record) {
+static void cmusfm_server_process_data(scrobbler_session_t * sbs,
+		const struct cmusfm_data_record * record) {
 
 	static char saved_data[CMSOCKET_BUFFER_SIZE];
 	static char saved_is_radio = 0;
-	struct cmusfm_data_record *saved_record = (struct cmusfm_data_record *)saved_data;
+	struct cmusfm_data_record * saved_record = (struct cmusfm_data_record *)saved_data;
 
 	/* scrobbler stuff */
 	static time_t scrobbler_fail_time = 1;
@@ -119,13 +121,13 @@ static void cmusfm_server_process_data(scrobbler_session_t *sbs,
 
 	/* check for data integrity */
 	if (make_record_checksum1(record) != record->checksum1 ||
-			(checksum2 = make_record_checksum2(record)) != record->checksum2)
+	    (checksum2 = make_record_checksum2(record)) != record->checksum2)
 		return;
 
 	debug("Payload: %s - %s - %d. %s (%ds)",
-			get_record_artist(record), get_record_album(record),
-			record->track_number, get_record_title(record),
-			record->duration);
+	      get_record_artist(record), get_record_album(record),
+	      record->track_number, get_record_title(record),
+	      record->duration);
 	debug("Location: %s", get_record_location(record));
 
 #if DEBUG && !defined(DEBUG_SKIP_HICCUP)
@@ -138,7 +140,7 @@ static void cmusfm_server_process_data(scrobbler_session_t *sbs,
 
 	/* test connection to server (on failure try again in some time) */
 	if (scrobbler_fail_time != 0 &&
-			time(NULL) - scrobbler_fail_time > SERVICE_RETRY_DELAY) {
+	    time(NULL) - scrobbler_fail_time > SERVICE_RETRY_DELAY) {
 		if (scrobbler_test_session_key(sbs) == 0) {  /* everything should be OK now */
 			scrobbler_fail_time = 0;
 
@@ -169,7 +171,7 @@ action_submit:
 				goto action_submit_skip;
 
 			if ((saved_is_radio && !config.submit_shoutcast) ||
-					(!saved_is_radio && !config.submit_localfile)) {
+			    (!saved_is_radio && !config.submit_localfile)) {
 				/* skip submission if we don't want it */
 				debug("Submission not enabled");
 				goto action_submit_skip;
@@ -181,7 +183,7 @@ action_submit:
 					goto action_submit_failed;
 				}
 			}
-			else  /* write data to cache */
+			else /* write data to cache */
 action_submit_failed:
 				cmusfm_cache_update(&sb_tinf);
 		}
@@ -196,7 +198,7 @@ action_submit_skip:
 
 			if ((record->status & CMSTATUS_SHOUTCASTMASK) != 0)
 				/* you have to listen radio min 90s (50% of 180) */
-				fulltime = 180;  /* overrun DEVBYZERO in URL mode :) */
+				fulltime = 180; /* overrun DEVBYZERO in URL mode :) */
 			else
 				fulltime = record->duration;
 
@@ -210,8 +212,9 @@ action_nowplaying:
 
 #if ENABLE_LIBNOTIFY
 				if (config.notification)
-					cmusfm_notify_show(&sb_tinf, get_album_cover_file(
-								get_record_location(record), config.format_coverfile));
+					cmusfm_notify_show(&sb_tinf,
+					                   get_album_cover_file(get_record_location(record),
+					                                        config.format_coverfile));
 				else
 					debug("Notification not enabled");
 #endif
@@ -219,7 +222,7 @@ action_nowplaying:
 				/* update now-playing indicator */
 				if (scrobbler_fail_time == 0) {
 					if ((saved_is_radio && config.nowplaying_shoutcast) ||
-							(!saved_is_radio && config.nowplaying_localfile)) {
+					    (!saved_is_radio && config.nowplaying_localfile)) {
 						if (scrobbler_update_now_playing(sbs, &sb_tinf) != 0)
 							scrobbler_fail_time = 1;
 					}
@@ -294,7 +297,7 @@ static void cmusfm_server_stop(int sig) {
 int cmusfm_server_start(void) {
 
 	char buffer[CMSOCKET_BUFFER_SIZE];
-	scrobbler_session_t *sbs;
+	scrobbler_session_t * sbs;
 #if HAVE_SYS_INOTIFY_H
 	struct inotify_event inot_even;
 #endif
@@ -318,7 +321,7 @@ int cmusfm_server_start(void) {
 
 	/* initialize scrobbling library */
 	sbs = scrobbler_initialize(config.service_api_url,
-			config.service_auth_url, SC_api_key, SC_secret);
+	                           config.service_auth_url, SC_api_key, SC_secret);
 	scrobbler_set_session_key(sbs, config.session_key);
 
 	/* catch signals which are used to quit server */
@@ -344,7 +347,7 @@ int cmusfm_server_start(void) {
 	while (server_on) {
 
 		if (poll(pfds, 3, -1) == -1)
-			break;  /* signal interruption */
+			break; /* signal interruption */
 
 		if (pfds[0].revents & POLLIN) {
 			pfds[1].fd = accept(pfds[0].fd, NULL, NULL);
@@ -393,16 +396,16 @@ final:
 }
 
 /* Send track info to server instance. */
-int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
+int cmusfm_server_send_track(struct cmtrack_info * tinfo) {
 
 	char buffer[CMSOCKET_BUFFER_SIZE] = { 0 };
-	struct cmusfm_data_record *record = (struct cmusfm_data_record *)buffer;
-	struct format_match *match, *matches;
+	struct cmusfm_data_record * record = (struct cmusfm_data_record *)buffer;
+	struct format_match * match, * matches;
 	int err, sock;
 
 	/* helper accessors for dynamic fields */
-	char *mb_track_id = &buffer[sizeof(*record)];
-	char *artist, *album_artist, *album, *title, *location;
+	char * mb_track_id = &buffer[sizeof(*record)];
+	char * artist, * album_artist, * album, * title, * location;
 	size_t size = sizeof(buffer) - (mb_track_id - buffer) - 6;
 
 	debug("Sending track to server");
@@ -427,7 +430,7 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 		tinfo->artist = tinfo->album_artist;
 
 	if ((tinfo->url != NULL && tinfo->artist == NULL && tinfo->title != NULL) ||
-			(tinfo->file != NULL && !(tinfo->artist != NULL && tinfo->title != NULL))) {
+	    (tinfo->file != NULL && !(tinfo->artist != NULL && tinfo->title != NULL))) {
 		debug("Regular expression matching mode");
 
 		if (tinfo->url != NULL) {
@@ -518,7 +521,7 @@ int cmusfm_server_send_track(struct cmtrack_info *tinfo) {
 		goto fail;
 
 	ssize_t len = sizeof(struct cmusfm_data_record) +
-		record->off_location + strlen(location) + 1;
+	              record->off_location + strlen(location) + 1;
 	debug("Record length: %zd", len);
 	if (write(sock, buffer, len) != len)
 		goto fail;
@@ -533,6 +536,6 @@ fail:
 }
 
 /* Helper function for retrieving server socket file. */
-char *get_cmusfm_socket_file(void) {
+char * get_cmusfm_socket_file(void) {
 	return get_cmus_home_file(SOCKET_FNAME);
 }

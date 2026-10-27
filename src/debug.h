@@ -14,9 +14,9 @@
 #include <stdio.h>
 
 #if DEBUG
-# define debug(M, ARGS...) fprintf(stderr, "DEBUG %s:%d: " M "\n", __FILE__, __LINE__, ## ARGS)
+# define debug(M, ARGS ...) fprintf(stderr, "DEBUG %s:%d: " M "\n", __FILE__, __LINE__, ## ARGS)
 #else
-# define debug(M, ARGS...) do {} while (0)
+# define debug(M, ARGS ...) do {} while (0)
 #endif
 
 #endif

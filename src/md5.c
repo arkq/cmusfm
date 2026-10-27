@@ -46,7 +46,7 @@
 # include <openssl/md5.h>
 #else
 
-#include <string.h>
+# include <string.h>
 
 /* Any 32-bit or wider unsigned integer data type will do */
 typedef unsigned int MD5_u32plus;
@@ -58,7 +58,7 @@ typedef struct {
 	MD5_u32plus block[16];
 } MD5_CTX;
 
-#define MD5_DIGEST_LENGTH 16
+# define MD5_DIGEST_LENGTH 16
 
 /*
  * The basic MD5 functions.
@@ -67,16 +67,16 @@ typedef struct {
  * architectures that lack an AND-NOT instruction, just like in Colin Plumb's
  * implementation.
  */
-#define F(x, y, z)			((z) ^ ((x) & ((y) ^ (z))))
-#define G(x, y, z)			((y) ^ ((z) & ((x) ^ (y))))
-#define H(x, y, z)			(((x) ^ (y)) ^ (z))
-#define H2(x, y, z)			((x) ^ ((y) ^ (z)))
-#define I(x, y, z)			((y) ^ ((x) | ~(z)))
+# define F(x, y, z)      ((z) ^ ((x) & ((y) ^ (z))))
+# define G(x, y, z)      ((y) ^ ((z) & ((x) ^ (y))))
+# define H(x, y, z)      (((x) ^ (y)) ^ (z))
+# define H2(x, y, z)     ((x) ^ ((y) ^ (z)))
+# define I(x, y, z)      ((y) ^ ((x) | ~(z)))
 
 /*
  * The MD5 transformation for all four rounds.
  */
-#define STEP(f, a, b, c, d, x, t, s) \
+# define STEP(f, a, b, c, d, x, t, s) \
 	(a) += f((b), (c), (d)) + (x) + (t); \
 	(a) = (((a) << (s)) | (((a) & 0xffffffff) >> (32 - (s)))); \
 	(a) += (b);
@@ -96,29 +96,29 @@ typedef struct {
  * link-time optimizations.  For the time being, keeping these MD5 routines in
  * their own translation unit avoids the problem.
  */
-#if defined(__i386__) || defined(__x86_64__) || defined(__vax__)
-#define SET(n) \
+# if defined(__i386__) || defined(__x86_64__) || defined(__vax__)
+#  define SET(n) \
 	(*(MD5_u32plus *)&ptr[(n) * 4])
-#define GET(n) \
+#  define GET(n) \
 	SET(n)
-#else
-#define SET(n) \
+# else
+#  define SET(n) \
 	(ctx->block[(n)] = \
-	(MD5_u32plus)ptr[(n) * 4] | \
-	((MD5_u32plus)ptr[(n) * 4 + 1] << 8) | \
-	((MD5_u32plus)ptr[(n) * 4 + 2] << 16) | \
-	((MD5_u32plus)ptr[(n) * 4 + 3] << 24))
-#define GET(n) \
+		 (MD5_u32plus)ptr[(n) * 4] | \
+		 ((MD5_u32plus)ptr[(n) * 4 + 1] << 8) | \
+		 ((MD5_u32plus)ptr[(n) * 4 + 2] << 16) | \
+		 ((MD5_u32plus)ptr[(n) * 4 + 3] << 24))
+#  define GET(n) \
 	(ctx->block[(n)])
-#endif
+# endif
 
 /*
  * This processes one or more 64-byte data blocks, but does NOT update the bit
  * counters.  There are no alignment requirements.
  */
-static const void *body(MD5_CTX *ctx, const void *data, unsigned long size) {
+static const void * body(MD5_CTX * ctx, const void * data, unsigned long size) {
 
-	const unsigned char *ptr;
+	const unsigned char * ptr;
 	MD5_u32plus a, b, c, d;
 	MD5_u32plus saved_a, saved_b, saved_c, saved_d;
 
@@ -223,7 +223,7 @@ static const void *body(MD5_CTX *ctx, const void *data, unsigned long size) {
 	return ptr;
 }
 
-static void MD5_Init(MD5_CTX *ctx) {
+static void MD5_Init(MD5_CTX * ctx) {
 
 	ctx->a = 0x67452301;
 	ctx->b = 0xefcdab89;
@@ -234,7 +234,7 @@ static void MD5_Init(MD5_CTX *ctx) {
 	ctx->hi = 0;
 }
 
-static void MD5_Update(MD5_CTX *ctx, const void *data, unsigned long size) {
+static void MD5_Update(MD5_CTX * ctx, const void * data, unsigned long size) {
 
 	MD5_u32plus saved_lo;
 	unsigned long used, available;
@@ -268,13 +268,13 @@ static void MD5_Update(MD5_CTX *ctx, const void *data, unsigned long size) {
 	memcpy(ctx->buffer, data, size);
 }
 
-#define OUT(dst, src) \
+# define OUT(dst, src) \
 	(dst)[0] = (unsigned char)(src); \
 	(dst)[1] = (unsigned char)((src) >> 8); \
 	(dst)[2] = (unsigned char)((src) >> 16); \
 	(dst)[3] = (unsigned char)((src) >> 24);
 
-static void MD5_Final(unsigned char *result, MD5_CTX *ctx) {
+static void MD5_Final(unsigned char * result, MD5_CTX * ctx) {
 
 	unsigned long used, available;
 
@@ -307,7 +307,7 @@ static void MD5_Final(unsigned char *result, MD5_CTX *ctx) {
 	memset(ctx, 0, sizeof(*ctx));
 }
 
-void MD5(const void *data, unsigned long size, unsigned char *result) {
+void MD5(const void * data, unsigned long size, unsigned char * result) {
 	MD5_CTX ctx;
 	MD5_Init(&ctx);
 	MD5_Update(&ctx, data, size);

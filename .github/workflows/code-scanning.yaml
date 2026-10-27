@@ -15,10 +15,24 @@ permissions:
 
 jobs:
 
+  c-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Dependencies
+        uses: gerlero/apt-install@v1
+        with:
+          packages: uncrustify
+      - name: Run C Linter
+        run: |
+          uncrustify -c .uncrustify -l C --no-backup \
+            src/* test/* config.h.in
+          git diff --exit-code
+
   code-ql:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install Dependencies
         uses: gerlero/apt-install@v1
         with:
@@ -40,6 +54,6 @@ jobs:
   reuse:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: REUSE Compliance Check
         uses: fsfe/reuse-action@v6

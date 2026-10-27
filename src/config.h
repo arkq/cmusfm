@@ -56,11 +56,11 @@ struct cmusfm_config {
 };
 
 
-char *get_cmusfm_config_file(void);
-int cmusfm_config_read(const char *fname, struct cmusfm_config *conf);
-int cmusfm_config_write(const char *fname, struct cmusfm_config *conf);
+char * get_cmusfm_config_file(void);
+int cmusfm_config_read(const char * fname, struct cmusfm_config * conf);
+int cmusfm_config_write(const char * fname, struct cmusfm_config * conf);
 #if HAVE_SYS_INOTIFY_H
 int cmusfm_config_add_watch(int fd);
 #endif
 
-#endif  /* CMUSFM_CONFIG_H_ */
+#endif

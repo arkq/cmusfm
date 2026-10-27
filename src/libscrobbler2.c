@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <curl/curl.h>
 
 #include "debug.h"
@@ -29,10 +30,10 @@ enum sb_request_data_type {
 /**
  * Request data name-value element. */
 struct sb_request_data {
-	char *name;
+	char * name;
 	enum sb_request_data_type type;
 	union {
-		const char *s;
+		const char * s;
 		unsigned long n;
 	} value;
 };
@@ -40,24 +41,23 @@ struct sb_request_data {
 /**
  * Data structure for GET/POST server response. */
 struct sb_response_data {
-	char *data;
+	char * data;
 	int size;
 };
 
-static char *mem2hex(char *dest, const unsigned char *mem, size_t n);
+static char * mem2hex(char * dest, const unsigned char * mem, size_t n);
 
 /* CURL write callback function. */
-static size_t sb_curl_write_callback(char *ptr, size_t size, size_t nmemb,
-		void *data) {
+static size_t sb_curl_write_callback(char * ptr, size_t size, size_t nmemb, void * data) {
 
-	struct sb_response_data *rd = (struct sb_response_data *)data;
+	struct sb_response_data * rd = (struct sb_response_data *)data;
 	size *= nmemb;
 
 	debug("Read: size: %zu, body: %s", size, ptr);
 
 	/* XXX: Passing a zero bytes data to this callback is not en error,
 	 *      however memory allocation fail is. */
-	void *tmp = rd->data;
+	void * tmp = rd->data;
 	if (!size || (rd->data = realloc(rd->data, rd->size + size + 1)) == NULL) {
 		free(tmp);
 		return 0;
@@ -71,9 +71,9 @@ static size_t sb_curl_write_callback(char *ptr, size_t size, size_t nmemb,
 }
 
 /* Initialize CURL handler for internal usage. */
-static CURL *sb_curl_init(CURLoption method, struct sb_response_data *response) {
+static CURL * sb_curl_init(CURLoption method, struct sb_response_data * response) {
 
-	CURL *curl;
+	CURL * curl;
 
 	if ((curl = curl_easy_init()) == NULL)
 		return NULL;
@@ -107,14 +107,14 @@ static CURL *sb_curl_init(CURLoption method, struct sb_response_data *response) 
 }
 
 /* Cleanup CURL handler and free allocated response buffer. */
-static void sb_curl_cleanup(CURL *curl, struct sb_response_data *response) {
+static void sb_curl_cleanup(CURL * curl, struct sb_response_data * response) {
 	curl_easy_cleanup(curl);
 	free(response->data);
 }
 
 /* Check scrobble API response status (and curl itself). */
-static scrobbler_status_t sb_check_response(struct sb_response_data *response,
-		int curl_status, scrobbler_session_t *sbs) {
+static scrobbler_status_t sb_check_response(struct sb_response_data * response,
+		int curl_status, scrobbler_session_t * sbs) {
 
 	debug("Check: status: %d, body: %s", curl_status, response->data);
 
@@ -132,7 +132,7 @@ static scrobbler_status_t sb_check_response(struct sb_response_data *response,
 
 	/* scrobbler service failure */
 	if (strstr(response->data, "<lfm status=\"ok\"") == NULL) {
-		char *error = strstr(response->data, "<error code=");
+		char * error = strstr(response->data, "<error code=");
 		if (error != NULL)
 			sbs->errornum = atoi(error + 13);
 		else
@@ -148,8 +148,8 @@ static scrobbler_status_t sb_check_response(struct sb_response_data *response,
 /**
  * Generate MD5 signature for API call. */
 static void sb_generate_method_signature(
-		const scrobbler_session_t *sbs,
-		const struct sb_request_data *sb_data,
+		const scrobbler_session_t * sbs,
+		const struct sb_request_data * sb_data,
 		size_t sb_request_elements,
 		uint8_t sign[MD5_DIGEST_LENGTH]) {
 
@@ -166,14 +166,14 @@ static void sb_generate_method_signature(
 			if (sb_data[i].value.n == 0)
 				continue;
 			offset += snprintf(&tmp_str[offset], sizeof(tmp_str) - offset,
-					"%s%lu", sb_data[i].name, sb_data[i].value.n);
+			                   "%s%lu", sb_data[i].name, sb_data[i].value.n);
 			break;
 		case SB_REQUEST_DATA_TYPE_STRING:
 			/* discard NULL string values */
 			if (sb_data[i].value.s == NULL)
 				continue;
 			offset += snprintf(&tmp_str[offset], sizeof(tmp_str) - offset,
-					"%s%s", sb_data[i].name, sb_data[i].value.s);
+			                   "%s%s", sb_data[i].name, sb_data[i].value.s);
 			break;
 		}
 
@@ -188,7 +188,7 @@ static void sb_generate_method_signature(
 	MD5((unsigned char *)tmp_str, strlen(tmp_str), sign);
 
 #if DEBUG
-	char *tmp;
+	char * tmp;
 	if ((tmp = strstr(tmp_str, sbs->session_key)) != NULL)
 		memset(tmp, 'x', strlen(sbs->session_key));
 	debug("Signature data: %s", tmp_str);
@@ -198,15 +198,15 @@ static void sb_generate_method_signature(
 
 /**
  * Make curl GET/POST request string. */
-static char *sb_make_curl_request_string(
-		const scrobbler_session_t *sbs,
-		const struct sb_request_data *sb_data,
+static char * sb_make_curl_request_string(
+		const scrobbler_session_t * sbs,
+		const struct sb_request_data * sb_data,
 		size_t sb_request_elements,
-		char *dest,
+		char * dest,
 		size_t dest_size,
-		CURL *curl) {
+		CURL * curl) {
 
-	char *escaped_data;
+	char * escaped_data;
 	size_t i, offset;
 
 	offset = 0;
@@ -218,7 +218,7 @@ static char *sb_make_curl_request_string(
 			if (sb_data[i].value.n == 0)
 				continue;
 			offset += snprintf(&dest[offset], dest_size - offset,
-					"%s=%lu&", sb_data[i].name, sb_data[i].value.n);
+			                   "%s=%lu&", sb_data[i].name, sb_data[i].value.n);
 			break;
 		case SB_REQUEST_DATA_TYPE_STRING:
 			/* discard NULL string values */
@@ -227,7 +227,7 @@ static char *sb_make_curl_request_string(
 			/* escape for string data */
 			escaped_data = curl_easy_escape(curl, sb_data[i].value.s, 0);
 			offset += snprintf(&dest[offset], dest_size - offset,
-					"%s=%s&", sb_data[i].name, escaped_data);
+			                   "%s=%s&", sb_data[i].name, escaped_data);
 			curl_free(escaped_data);
 			break;
 		}
@@ -242,7 +242,7 @@ static char *sb_make_curl_request_string(
 
 #if DEBUG
 	char tmp_str[2048] = {};
-	char *tmp = strncpy(tmp_str, dest, sizeof(tmp_str) - 1);
+	char * tmp = strncpy(tmp_str, dest, sizeof(tmp_str) - 1);
 	if ((tmp = strstr(tmp, sbs->session_key)) != NULL)
 		memset(tmp, 'x', strlen(sbs->session_key));
 	debug("Request: %s", tmp_str);
@@ -254,10 +254,10 @@ static char *sb_make_curl_request_string(
 }
 
 /* Scrobble a track. */
-scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
-		scrobbler_trackinfo_t *sbt) {
+scrobbler_status_t scrobbler_scrobble(scrobbler_session_t * sbs,
+		scrobbler_trackinfo_t * sbt) {
 
-	CURL *curl;
+	CURL * curl;
 	uint8_t sign[MD5_DIGEST_LENGTH];
 	char api_key_hex[sizeof(sbs->api_key) * 2 + 1];
 	char sign_hex[sizeof(sign) * 2 + 1];
@@ -284,8 +284,8 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
 
 	debug("Scrobble: %ld", sbt->timestamp);
 	debug("Payload: %s - %s (%s) - %d. %s (%ds)",
-			sbt->artist, sbt->album, sbt->album_artist,
-			sbt->track_number, sbt->track, sbt->duration);
+	      sbt->artist, sbt->album, sbt->album_artist,
+	      sbt->track_number, sbt->track, sbt->duration);
 
 	if (sbt->artist == NULL || sbt->track == NULL || sbt->timestamp == 0)
 		return sbs->status = SCROBBLER_STATUS_ERR_TRACKINF;
@@ -301,7 +301,7 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
 
 	/* make track.scrobble POST request */
 	sb_make_curl_request_string(sbs, sb_data, ARRAYSIZE(sb_data),
-			post_data, sizeof(post_data), curl);
+	                            post_data, sizeof(post_data), curl);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
 	curl_easy_setopt(curl, CURLOPT_URL, sbs->api_url);
 
@@ -314,10 +314,10 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs,
 
 /* Notify Last.fm that a user has started listening to a track. This
  * is an engine function (without a check for required arguments). */
-static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
-		scrobbler_trackinfo_t *sbt) {
+static scrobbler_status_t sb_update_now_playing(scrobbler_session_t * sbs,
+		scrobbler_trackinfo_t * sbt) {
 
-	CURL *curl;
+	CURL * curl;
 	uint8_t sign[MD5_DIGEST_LENGTH];
 	char api_key_hex[sizeof(sbs->api_key) * 2 + 1];
 	char sign_hex[sizeof(sign) * 2 + 1];
@@ -342,8 +342,8 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 
 	debug("Now playing: %ld", sbt->timestamp);
 	debug("Payload: %s - %s (%s) - %d. %s (%ds)",
-			sbt->artist, sbt->album, sbt->album_artist,
-			sbt->track_number, sbt->track, sbt->duration);
+	      sbt->artist, sbt->album, sbt->album_artist,
+	      sbt->track_number, sbt->track, sbt->duration);
 
 	if ((curl = sb_curl_init(CURLOPT_POST, &response)) == NULL)
 		return sbs->status = SCROBBLER_STATUS_ERR_CURLINIT;
@@ -356,7 +356,7 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 
 	/* make track.updateNowPlaying POST request */
 	sb_make_curl_request_string(sbs, sb_data, ARRAYSIZE(sb_data),
-			post_data, sizeof(post_data), curl);
+	                            post_data, sizeof(post_data), curl);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
 	curl_easy_setopt(curl, CURLOPT_URL, sbs->api_url);
 
@@ -368,8 +368,8 @@ static scrobbler_status_t sb_update_now_playing(scrobbler_session_t *sbs,
 }
 
 /* Update "Now playing" notification. */
-scrobbler_status_t scrobbler_update_now_playing(scrobbler_session_t *sbs,
-		scrobbler_trackinfo_t *sbt) {
+scrobbler_status_t scrobbler_update_now_playing(scrobbler_session_t * sbs,
+		scrobbler_trackinfo_t * sbt) {
 	debug("Now playing wrapper");
 	if (sbt->artist == NULL || sbt->track == NULL)
 		return sbs->status = SCROBBLER_STATUS_ERR_TRACKINF;
@@ -378,7 +378,7 @@ scrobbler_status_t scrobbler_update_now_playing(scrobbler_session_t *sbs,
 
 /* Hard-codded method for validating session key. This approach uses the
  * updateNotify method call with invalid parameters as a test call. */
-scrobbler_status_t scrobbler_test_session_key(scrobbler_session_t *sbs) {
+scrobbler_status_t scrobbler_test_session_key(scrobbler_session_t * sbs) {
 	debug("Session validation wrapper");
 	scrobbler_trackinfo_t sbt = { .artist = "", .track = "" };
 	sb_update_now_playing(sbs, &sbt);
@@ -386,32 +386,32 @@ scrobbler_status_t scrobbler_test_session_key(scrobbler_session_t *sbs) {
 	 * service might actually return the "Invalid Parameters" error code.
 	 * However, it means that the session key itself is valid. */
 	if (sbs->status == SCROBBLER_STATUS_ERR_SCROBAPI &&
-			sbs->errornum == SCROBBLER_API_ERR_INVALID_PARAMS)
+	    sbs->errornum == SCROBBLER_API_ERR_INVALID_PARAMS)
 		return SCROBBLER_STATUS_OK;
 	return sbs->status;
 }
 
 /* Get the session key. */
-const char *scrobbler_get_session_key(scrobbler_session_t *sbs) {
+const char * scrobbler_get_session_key(scrobbler_session_t * sbs) {
 	return sbs->session_key;
 }
 
 /* Set the session key. */
-void scrobbler_set_session_key(scrobbler_session_t *sbs, const char *str) {
+void scrobbler_set_session_key(scrobbler_session_t * sbs, const char * str) {
 	strncpy(sbs->session_key, str, sizeof(sbs->session_key) - 1);
 	sbs->session_key[sizeof(sbs->session_key) - 1] = '\0';
 }
 
 /* Perform scrobbler service authentication process. */
-scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
+scrobbler_status_t scrobbler_authentication(scrobbler_session_t * sbs,
 		scrobbler_authuser_callback_t callback) {
 
-	CURL *curl;
+	CURL * curl;
 	scrobbler_status_t status;
 	uint8_t sign[MD5_DIGEST_LENGTH];
 	char api_key_hex[sizeof(sbs->api_key) * 2 + 1];
 	char sign_hex[sizeof(sign) * 2 + 1], token_hex[33];
-	char get_url[1024], *ptr;
+	char get_url[1024], * ptr;
 	struct sb_response_data response;
 	size_t len;
 
@@ -442,7 +442,7 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	/* make auth.getToken GET request */
 	len = snprintf(get_url, sizeof(get_url), "%s?", sbs->api_url);
 	sb_make_curl_request_string(sbs, sb_data_token, ARRAYSIZE(sb_data_token),
-			get_url + len, sizeof(get_url) - len, curl);
+	                            get_url + len, sizeof(get_url) - len, curl);
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 
 	status = sb_check_response(&response, curl_easy_perform(curl), sbs);
@@ -456,7 +456,7 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 
 	/* perform user authorization (callback function) */
 	snprintf(get_url, sizeof(get_url), "%s?api_key=%s&token=%s",
-			sbs->auth_url, api_key_hex, token_hex);
+	         sbs->auth_url, api_key_hex, token_hex);
 	if (callback(get_url) != 0) {
 		sb_curl_cleanup(curl, &response);
 		return sbs->status = SCROBBLER_STATUS_ERR_CALLBACK;
@@ -472,7 +472,7 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	/* make auth.getSession GET request */
 	len = snprintf(get_url, sizeof(get_url), "%s?", sbs->api_url);
 	sb_make_curl_request_string(sbs, sb_data_session, ARRAYSIZE(sb_data_session),
-			get_url + len, sizeof(get_url) - len, curl);
+	                            get_url + len, sizeof(get_url) - len, curl);
 	curl_easy_setopt(curl, CURLOPT_URL, get_url);
 
 	status = sb_check_response(&response, curl_easy_perform(curl), sbs);
@@ -483,15 +483,13 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 	}
 
 	/* extract user name from the response */
-	strncpy(sbs->user_name, strstr(response.data, "<name>") + 6,
-			sizeof(sbs->user_name));
+	strncpy(sbs->user_name, strstr(response.data, "<name>") + 6, sizeof(sbs->user_name));
 	sbs->user_name[sizeof(sbs->user_name) - 1] = '\0';
 	if ((ptr = strchr(sbs->user_name, '<')) != NULL)
 		*ptr = 0;
 
 	/* extract session key from the response */
-	strncpy(sbs->session_key, strstr(response.data, "<key>") + 5,
-			sizeof(sbs->session_key));
+	strncpy(sbs->session_key, strstr(response.data, "<key>") + 5, sizeof(sbs->session_key));
 	sbs->session_key[sizeof(sbs->session_key) - 1] = '\0';
 
 	sb_curl_cleanup(curl, &response);
@@ -501,10 +499,10 @@ scrobbler_status_t scrobbler_authentication(scrobbler_session_t *sbs,
 /* Initialize scrobbler session. On success this function returns pointer
  * to allocated scrobbler_session structure, which must be freed by call
  * to scrobbler_free. On error NULL is returned. */
-scrobbler_session_t *scrobbler_initialize(const char *api_url,
-		const char *auth_url, uint8_t api_key[16], uint8_t secret[16]) {
+scrobbler_session_t * scrobbler_initialize(const char * api_url,
+		const char * auth_url, uint8_t api_key[16], uint8_t secret[16]) {
 
-	scrobbler_session_t *sbs;
+	scrobbler_session_t * sbs;
 
 	/* allocate space for scrobbler session structure */
 	if ((sbs = calloc(1, sizeof(scrobbler_session_t))) == NULL)
@@ -523,13 +521,13 @@ scrobbler_session_t *scrobbler_initialize(const char *api_url,
 	return sbs;
 }
 
-void scrobbler_free(scrobbler_session_t *sbs) {
+void scrobbler_free(scrobbler_session_t * sbs) {
 	curl_global_cleanup();
 	free(sbs);
 }
 
 /* Get the human-readable error message. */
-const char *scrobbler_strerror(scrobbler_session_t *sbs) {
+const char * scrobbler_strerror(scrobbler_session_t * sbs) {
 	switch (sbs->status) {
 	case SCROBBLER_STATUS_OK:
 		return "Success";
@@ -602,10 +600,10 @@ const char *scrobbler_strerror(scrobbler_session_t *sbs) {
 /* Dump memory pointed by the mem into the dest string in the hexadecimal
  * format. Note, that the dest has to be big enough to contain 2 * n with
  * termination NULL character. */
-char *mem2hex(char *dest, const unsigned char *mem, size_t n) {
+char * mem2hex(char * dest, const unsigned char * mem, size_t n) {
 
 	const char hexchars[] = "0123456789abcdef";
-	char *ptr = dest;
+	char * ptr = dest;
 	size_t i;
 
 	for (i = 0; i < n; i++) {

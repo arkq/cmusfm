@@ -10,7 +10,7 @@
 #define DEBUG_SKIP_HICCUP
 #include "test-server.inc"
 
-void *cmusfm_server_worker(void *arg) {
+void * cmusfm_server_worker(void * arg) {
 	(void)arg;
 	cmusfm_server_start();
 	return NULL;

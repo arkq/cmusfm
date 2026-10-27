@@ -25,28 +25,32 @@
 #include "server.h"
 
 
-/* Last.fm API key for cmusfm */
-unsigned char SC_api_key[16] = {0x67, 0x08, 0x2e, 0x45, 0xda, 0xb1,
-		0xf6, 0x43, 0x3d, 0xa7, 0x2a, 0x00, 0xe3, 0xbc, 0x03, 0x7a};
-unsigned char SC_secret[16] = {0x02, 0xfc, 0xbc, 0x90, 0x34, 0x1a,
-		0x01, 0xf2, 0x1c, 0x3b, 0xfc, 0x05, 0xb6, 0x36, 0xe3, 0xae};
+/* Last.fm API key for cmusfm. */
+unsigned char SC_api_key[16] = {
+	0x67, 0x08, 0x2e, 0x45, 0xda, 0xb1, 0xf6, 0x43, 0x3d, 0xa7, 0x2a, 0x00, 0xe3, 0xbc, 0x03, 0x7a
+};
+
+/* Last.fm API secret associated with the key. */
+unsigned char SC_secret[16] = {
+	0x02, 0xfc, 0xbc, 0x90, 0x34, 0x1a, 0x01, 0xf2, 0x1c, 0x3b, 0xfc, 0x05, 0xb6, 0x36, 0xe3, 0xae
+};
 
 /* Global cmusfm file location variables */
-const char *cmusfm_cache_file = NULL;
-const char *cmusfm_config_file = NULL;
-const char *cmusfm_socket_file = NULL;
+const char * cmusfm_cache_file = NULL;
+const char * cmusfm_config_file = NULL;
+const char * cmusfm_socket_file = NULL;
 
 /* Global configuration structure */
 struct cmusfm_config config;
 
 /* Access global environment variables */
-extern char **environ;
+extern char ** environ;
 
 /* Parse status arguments which we've get from the cmus and return track info
  * structure. Upon error NULL is returned and errno is set appropriately. */
-static struct cmtrack_info *get_track_info(int argc, char *argv[]) {
+static struct cmtrack_info * get_track_info(int argc, char * argv[]) {
 
-	struct cmtrack_info *tinfo;
+	struct cmtrack_info * tinfo;
 	int i;
 
 	if ((tinfo = calloc(1, sizeof(*tinfo))) == NULL)
@@ -100,16 +104,16 @@ static struct cmtrack_info *get_track_info(int argc, char *argv[]) {
 }
 
 /* User authorization callback for the initialization process. */
-static int user_authorization(const char *url) {
+static int user_authorization(const char * url) {
 
 	printf("Grant access to your Last.fm account using the link below,"
-			" then press ENTER:\n  %s\n", url);
+	       " then press ENTER:\n  %s\n", url);
 
 #ifdef __APPLE__
-	char *cmd = "open";
+	char * cmd = "open";
 	char * const argv[] = { cmd, (char *)url, NULL };
 #else
-	char *cmd = "x-www-browser";
+	char * cmd = "x-www-browser";
 	char * const argv[] = { cmd, (char *)url, NULL };
 #endif
 
@@ -129,11 +133,11 @@ static int user_authorization(const char *url) {
  * and initialize configuration file with default values (if needed). */
 static void cmusfm_initialization(void) {
 
-	scrobbler_session_t *sbs;
+	scrobbler_session_t * sbs;
 	struct cmusfm_config conf;
 	bool check_prev_session;
 	bool fetch_new_session;
-	char yesno[8], *ptr;
+	char yesno[8], * ptr;
 
 	fetch_new_session = true;
 	check_prev_session = false;
@@ -148,8 +152,7 @@ static void cmusfm_initialization(void) {
 	if (strlen(conf.user_name) == 0)
 		check_prev_session = false;
 
-	sbs = scrobbler_initialize(conf.service_api_url,
-			conf.service_auth_url, SC_api_key, SC_secret);
+	sbs = scrobbler_initialize(conf.service_api_url, conf.service_auth_url, SC_api_key, SC_secret);
 
 	if (check_prev_session) {
 		printf("Checking previous session (user: %s) ...", conf.user_name);
@@ -180,16 +183,16 @@ static void cmusfm_initialization(void) {
 		printf("Error: unable to write file: %s\n", cmusfm_config_file);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char * argv[]) {
 
-	struct cmtrack_info *tinfo;
+	struct cmtrack_info * tinfo;
 
 	/* print initialization help message */
 	if (argc == 1) {
 		printf("usage: %s [init]\n\n"
-"NOTE: Before usage with the cmus you should invoke this program with the\n"
-"      `init` argument. Afterwards you can set the status_display_program\n"
-"      (for more information see `man cmus`). Enjoy!\n", argv[0]);
+		       "NOTE: Before usage with the cmus you should invoke this program with the\n"
+		       "      `init` argument. Afterwards you can set the status_display_program\n"
+		       "      (for more information see `man cmus`). Enjoy!\n", argv[0]);
 		return EXIT_SUCCESS;
 	}
 

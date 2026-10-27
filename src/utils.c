@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #if ENABLE_LIBNOTIFY
 # include <dirent.h>
 # include <libgen.h>
@@ -23,11 +24,11 @@
 
 
 /* Helper function for retrieving cmus configuration home path. */
-char *get_cmus_home_dir(void) {
+char * get_cmus_home_dir(void) {
 
 	const char cmusdir[] = "/cmus";
-	char *fullpath;
-	char *tmp;
+	char * fullpath;
+	char * tmp;
 
 	/* get our file path in the XDG configuration directory */
 	if ((tmp = getenv("XDG_CONFIG_HOME")) != NULL) {
@@ -48,10 +49,10 @@ char *get_cmus_home_dir(void) {
 
 /* Helper function for retrieving a path for given file inside the cmus
  * configuration home path. */
-char *get_cmus_home_file(const char *file) {
+char * get_cmus_home_file(const char * file) {
 
-	char *home;
-	char *fullpath;
+	char * home;
+	char * fullpath;
 
 	home = get_cmus_home_dir();
 	fullpath = malloc(strlen(home) + 1 + strlen(file) + 1);
@@ -66,10 +67,10 @@ char *get_cmus_home_file(const char *file) {
  * *nix command. On success it returns zero, or -1 if an error occurred. In
  * the latter case, the state of the directory structure is undefined - this
  * function does not provide self clean-up. */
-int mkdirp(const char *dir, mode_t mode) {
+int mkdirp(const char * dir, mode_t mode) {
 
-	char *tmp = strdup(dir);
-	char *p = tmp;
+	char * tmp = strdup(dir);
+	char * p = tmp;
 	size_t len;
 
 	len = strlen(tmp);
@@ -88,10 +89,10 @@ int mkdirp(const char *dir, mode_t mode) {
 }
 
 /* Simple and fast "hashing" function. */
-int make_data_hash(const unsigned char *data, int len) {
-	int x, hash;
-	for (x = hash = 0; x < len; x++)
-		hash += data[x] * (x + 1);
+int make_data_hash(const void * data, size_t len) {
+	int hash;
+	for (size_t x = hash = 0; x < len; x++)
+		hash += ((unsigned char *)data)[x] * (x + 1);
 	return hash;
 }
 
@@ -100,14 +101,14 @@ int make_data_hash(const unsigned char *data, int len) {
  * be either a local file name or an URL. When cover file can not be found,
  * NULL is returned (URL case, or when coverfile ERE match failed). In case
  * of wild-card match, the first match is returned. */
-char *get_album_cover_file(const char *location, const char *format) {
+char * get_album_cover_file(const char * location, const char * format) {
 
 	static char fname[256];
 
-	DIR *dir;
-	struct dirent *dp;
+	DIR * dir;
+	struct dirent * dp;
 	regex_t regex;
-	char *tmp;
+	char * tmp;
 
 	debug("Get cover (case-insensitive): %s", format);
 
@@ -175,12 +176,12 @@ char *get_album_cover_file(const char *location, const char *format) {
  * In order to get a single match structure, one should use get_regexp_match()
  * function. When something goes wrong, NULL is returned. Memory for matches
  * is obtained with malloc(), and can be freed with free() function. */
-struct format_match *get_regexp_format_matches(const char *str, const char *format) {
+struct format_match * get_regexp_format_matches(const char * str, const char * format) {
 #define MATCHES_SIZE FORMAT_MATCH_TYPE_COUNT + 1
 
-	struct format_match *matches;
-	const char *p = format;
-	char *regexp;
+	struct format_match * matches;
+	const char * p = format;
+	char * regexp;
 	int status, i = 0;
 	regex_t regex;
 	regmatch_t regmatch[MATCHES_SIZE];
@@ -223,7 +224,7 @@ struct format_match *get_regexp_format_matches(const char *str, const char *form
 
 /* Return a pointer to the single format match structure with the given
  * match type. */
-struct format_match *get_regexp_match(struct format_match *matches,
+struct format_match * get_regexp_match(struct format_match * matches,
 		enum format_match_type type) {
 	while (matches->type) {
 		if (matches->type == type)

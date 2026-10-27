@@ -12,7 +12,7 @@
 int main(void) {
 
 	char track_buffer[512];
-	struct cmusfm_data_record *track = (struct cmusfm_data_record *)track_buffer;
+	struct cmusfm_data_record * track = (struct cmusfm_data_record *)track_buffer;
 
 	track->off_artist = 20;
 	track->off_album_artist = 40;

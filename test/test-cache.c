@@ -12,11 +12,11 @@
 #include "../src/utils.c"
 
 /* global variable used in the cache code */
-const char *cmusfm_cache_file;
+const char * cmusfm_cache_file;
 
 /* library function used by the cache code */
 int scrobbler_scrobble_count = 0;
-scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_trackinfo_t *sbt) {
+scrobbler_status_t scrobbler_scrobble(scrobbler_session_t * sbs, scrobbler_trackinfo_t * sbt) {
 	(void)sbs;
 	(void)sbt;
 	scrobbler_scrobble_count++;
@@ -25,7 +25,7 @@ scrobbler_status_t scrobbler_scrobble(scrobbler_session_t *sbs, scrobbler_tracki
 
 int main(void) {
 
-	FILE *f;
+	FILE * f;
 	size_t size;
 	char buffer[512];
 	int i;
@@ -58,7 +58,7 @@ int main(void) {
 	assert((f = fopen(cmusfm_cache_file, "r")) != NULL);
 	/* make sure the structure of the cache file is not changed */
 	assert((size = fread(buffer, 1, sizeof(buffer), f)) == 158);
-	assert(make_data_hash((unsigned char *)buffer, size) == 856388);
+	assert(make_data_hash(buffer, size) == 856388);
 	fclose(f);
 
 	cmusfm_cache_submit(NULL);

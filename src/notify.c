@@ -16,11 +16,11 @@
 
 
 /* global notification handler */
-static NotifyNotification *cmus_notify;
+static NotifyNotification * cmus_notify;
 
 
 /* Show track information via the notification system. */
-void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon) {
+void cmusfm_notify_show(const scrobbler_trackinfo_t * sb_tinf, const char * icon) {
 
 	/* initialize the notification subsystem if needed */
 	if (!notify_is_initted())
@@ -32,17 +32,17 @@ void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon) 
 		g_object_unref(G_OBJECT(cmus_notify));
 	}
 
-	GError *error = NULL;
-	const char *track = sb_tinf->track;
-	char *body = NULL;
+	GError * error = NULL;
+	const char * track = sb_tinf->track;
+	char * body = NULL;
 
-	const char *artist = "";
+	const char * artist = "";
 	if (sb_tinf->artist != NULL)
 		artist = sb_tinf->artist;
 	else if (sb_tinf->album_artist != NULL)
 		artist = sb_tinf->album_artist;
 
-	const char *album = "";
+	const char * album = "";
 	if (sb_tinf->album != NULL)
 		album = sb_tinf->album;
 

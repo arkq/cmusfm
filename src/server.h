@@ -38,20 +38,20 @@ struct cmusfm_data_record {
 	uint16_t off_location;
 
 	/* NULL-terminated strings
-	char mb_track_id[];
-	char artist[];
-	char album_artist[];
-	char album[];
-	char title[];
-	char location[];
-	*/
+	 * char mb_track_id[];
+	 * char artist[];
+	 * char album_artist[];
+	 * char album[];
+	 * char title[];
+	 * char location[];
+	 */
 
 };
 
 
 int cmusfm_server_check(void);
 int cmusfm_server_start(void);
-int cmusfm_server_send_track(struct cmtrack_info *tinfo);
-char *get_cmusfm_socket_file(void);
+int cmusfm_server_send_track(struct cmtrack_info * tinfo);
+char * get_cmusfm_socket_file(void);
 
-#endif  /* CMUSFM_SERVER_H_ */
+#endif

@@ -21,9 +21,9 @@
 
 /* Return the pointer to the configuration value substring. This function
  * strips all white-spaces and optional quotation marks. */
-static char *get_config_value(char *str) {
+static char * get_config_value(char * str) {
 
-	char *end;
+	char * end;
 
 	/* seek to the beginning of a value */
 	if ((str = strchr(str, '=')) == NULL)
@@ -32,8 +32,10 @@ static char *get_config_value(char *str) {
 	str += 1;
 
 	/* trim leading spaces and optional quotation */
-	while (isspace(*str)) str++;
-	if (*str == '"') str++;
+	while (isspace(*str))
+		str++;
+	if (*str == '"')
+		str++;
 
 	/* edge case handling */
 	if (*str == 0)
@@ -41,25 +43,27 @@ static char *get_config_value(char *str) {
 
 	/* trim trailing spaces and optional quotation */
 	end = str + strlen(str) - 1;
-	while (end > str && isspace(*end)) end--;
-	if (*end == '"') end--;
+	while (end > str && isspace(*end))
+		end--;
+	if (*end == '"')
+		end--;
 	*(end + 1) = 0;
 
 	return str;
 }
 
-static char *encode_config_bool(bool value) {
+static char * encode_config_bool(bool value) {
 	return value ? "yes" : "no";
 }
 
-static bool decode_config_bool(const char *value) {
+static bool decode_config_bool(const char * value) {
 	return strcmp(value, "yes") == 0;
 }
 
 /* Read cmusfm configuration from the file. */
-int cmusfm_config_read(const char *fname, struct cmusfm_config *conf) {
+int cmusfm_config_read(const char * fname, struct cmusfm_config * conf) {
 
-	FILE *f;
+	FILE * f;
 	char line[128];
 
 	/* initialize configuration defaults */
@@ -90,9 +94,11 @@ int cmusfm_config_read(const char *fname, struct cmusfm_config *conf) {
 			strncpy(conf->format_localfile, get_config_value(line), sizeof(conf->format_localfile) - 1);
 		else if (strncmp(line, CMCONF_FORMAT_SHOUTCAST, sizeof(CMCONF_FORMAT_SHOUTCAST) - 1) == 0)
 			strncpy(conf->format_shoutcast, get_config_value(line), sizeof(conf->format_shoutcast) - 1);
-		else if (strncmp(line, CMCONF_NOWPLAYING_LOCALFILE, sizeof(CMCONF_NOWPLAYING_LOCALFILE) - 1) == 0)
+		else if (strncmp(line, CMCONF_NOWPLAYING_LOCALFILE,
+		                 sizeof(CMCONF_NOWPLAYING_LOCALFILE) - 1) == 0)
 			conf->nowplaying_localfile = decode_config_bool(get_config_value(line));
-		else if (strncmp(line, CMCONF_NOWPLAYING_SHOUTCAST, sizeof(CMCONF_NOWPLAYING_SHOUTCAST) - 1) == 0)
+		else if (strncmp(line, CMCONF_NOWPLAYING_SHOUTCAST,
+		                 sizeof(CMCONF_NOWPLAYING_SHOUTCAST) - 1) == 0)
 			conf->nowplaying_shoutcast = decode_config_bool(get_config_value(line));
 		else if (strncmp(line, CMCONF_SUBMIT_LOCALFILE, sizeof(CMCONF_SUBMIT_LOCALFILE) - 1) == 0)
 			conf->submit_localfile = decode_config_bool(get_config_value(line));
@@ -114,10 +120,10 @@ int cmusfm_config_read(const char *fname, struct cmusfm_config *conf) {
 }
 
 /* Write cmusfm configuration to the file. */
-int cmusfm_config_write(const char *fname, struct cmusfm_config *conf) {
+int cmusfm_config_write(const char * fname, struct cmusfm_config * conf) {
 
 	int fd;
-	FILE *f;
+	FILE * f;
 
 	/* Create configuration file (truncate previous one) and set
 	 * access mode to protect session key from exposure. */
@@ -140,8 +146,10 @@ int cmusfm_config_write(const char *fname, struct cmusfm_config *conf) {
 #endif
 
 	fprintf(f, "\n");
-	fprintf(f, "%s = \"%s\"\n", CMCONF_NOWPLAYING_LOCALFILE, encode_config_bool(conf->nowplaying_localfile));
-	fprintf(f, "%s = \"%s\"\n", CMCONF_NOWPLAYING_SHOUTCAST, encode_config_bool(conf->nowplaying_shoutcast));
+	fprintf(f, "%s = \"%s\"\n", CMCONF_NOWPLAYING_LOCALFILE,
+	        encode_config_bool(conf->nowplaying_localfile));
+	fprintf(f, "%s = \"%s\"\n", CMCONF_NOWPLAYING_SHOUTCAST,
+	        encode_config_bool(conf->nowplaying_shoutcast));
 	fprintf(f, "%s = \"%s\"\n", CMCONF_SUBMIT_LOCALFILE, encode_config_bool(conf->submit_localfile));
 	fprintf(f, "%s = \"%s\"\n", CMCONF_SUBMIT_SHOUTCAST, encode_config_bool(conf->submit_shoutcast));
 #if ENABLE_LIBNOTIFY
@@ -165,6 +173,6 @@ int cmusfm_config_add_watch(int fd) {
 #endif
 
 /* Helper function for retrieving cmusfm configuration file. */
-char *get_cmusfm_config_file(void) {
+char * get_cmusfm_config_file(void) {
 	return get_cmus_home_file(CONFIG_FNAME);
 }

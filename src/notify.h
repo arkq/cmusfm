@@ -12,6 +12,6 @@
 
 void cmusfm_notify_initialize();
 void cmusfm_notify_free();
-void cmusfm_notify_show(const scrobbler_trackinfo_t *sb_tinf, const char *icon);
+void cmusfm_notify_show(const scrobbler_trackinfo_t * sb_tinf, const char * icon);
 
-#endif  /* CMUSFM_NOTIFY_H_ */
+#endif

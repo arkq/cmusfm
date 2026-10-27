@@ -10,42 +10,42 @@
 
 #include "cache.h"
 
+#include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <arpa/inet.h>
 
 #include "cmusfm.h"
 #include "debug.h"
 
 
 /* Return the actual size of the given cache record structure. */
-static size_t get_cache_record_size(const struct cmusfm_cache_record *record) {
+static size_t get_cache_record_size(const struct cmusfm_cache_record * record) {
 	return sizeof(*record) + record->len_artist + record->len_album +
-		record->len_track + record->len_album_artist + record->len_mb_track_id;
+	       record->len_track + record->len_album_artist + record->len_mb_track_id;
 }
 
 /* Return the checksum for the length-invariant part of the cache record
  * structure - segmentation-fault-safe checksum. */
-static uint8_t get_cache_record_checksum1(const struct cmusfm_cache_record *record) {
-	return make_data_hash((unsigned char *)&record->timestamp,
-			sizeof(*record) - ((char *)&record->timestamp - (char *)record));
+static uint8_t get_cache_record_checksum1(const struct cmusfm_cache_record * record) {
+	size_t len = sizeof(*record) - ((char *)&record->timestamp - (char *)record);
+	return make_data_hash(&record->timestamp, len);
 }
 
 /* Return the data checksum of the given cache record structure. If the
  * overall record length is compromised, we might end up dead... */
-static uint8_t get_cache_record_checksum2(const struct cmusfm_cache_record *record) {
-	return make_data_hash((unsigned char *)&record->timestamp,
-			get_cache_record_size(record) - ((char *)&record->timestamp - (char *)record));
+static uint8_t get_cache_record_checksum2(const struct cmusfm_cache_record * record) {
+	size_t len = get_cache_record_size(record) - ((char *)&record->timestamp - (char *)record);
+	return make_data_hash(&record->timestamp, len);
 }
 
 /* Copy scrobbler track info into the cache record structure. Returned
  * pointer has to be freed by the `free` function. */
-static struct cmusfm_cache_record *get_cache_record(const scrobbler_trackinfo_t *sb_tinf) {
+static struct cmusfm_cache_record * get_cache_record(const scrobbler_trackinfo_t * sb_tinf) {
 
-	struct cmusfm_cache_record *record;
-	char *ptr;
+	struct cmusfm_cache_record * record;
+	char * ptr;
 
 	/* allocate memory for the initial record data (header) */
 	record = (struct cmusfm_cache_record *)calloc(1, sizeof(*record));
@@ -98,16 +98,16 @@ static struct cmusfm_cache_record *get_cache_record(const scrobbler_trackinfo_t 
 }
 
 /* Write data, which should be submitted later, to the cache file. */
-void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf) {
+void cmusfm_cache_update(const scrobbler_trackinfo_t * sb_tinf) {
 
-	FILE *f;
-	struct cmusfm_cache_record *record;
+	FILE * f;
+	struct cmusfm_cache_record * record;
 	size_t record_size;
 
 	debug("Cache update: %ld", sb_tinf->timestamp);
 	debug("Payload: %s - %s (%s) - %d. %s (%ds)",
-			sb_tinf->artist, sb_tinf->album, sb_tinf->album_artist,
-			sb_tinf->track_number, sb_tinf->track, sb_tinf->duration);
+	      sb_tinf->artist, sb_tinf->album, sb_tinf->album_artist,
+	      sb_tinf->track_number, sb_tinf->track, sb_tinf->duration);
 
 	if ((f = fopen(cmusfm_cache_file, "a")) == NULL)
 		return;
@@ -133,14 +133,14 @@ void cmusfm_cache_update(const scrobbler_trackinfo_t *sb_tinf) {
 }
 
 /* Submit tracks saved in the cache file. */
-void cmusfm_cache_submit(scrobbler_session_t *sbs) {
+void cmusfm_cache_submit(scrobbler_session_t * sbs) {
 
 	char rd_buff[4096];
-	FILE *f;
+	FILE * f;
 	scrobbler_trackinfo_t sb_tinf;
-	struct cmusfm_cache_record *record;
+	struct cmusfm_cache_record * record;
 	size_t rd_len, record_size;
-	char *ptr;
+	char * ptr;
 
 	debug("Cache submit");
 
@@ -168,7 +168,7 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 
 			/* validate record type and first-stage data integration */
 			if (record->signature != CMUSFM_CACHE_SIGNATURE ||
-					record->checksum1 != get_cache_record_checksum1(record)) {
+			    record->checksum1 != get_cache_record_checksum1(record)) {
 				fprintf(stderr, "ERROR: Invalid cache record signature\n");
 				debug("Signature: %x, checksum: %x", record->signature, record->checksum1);
 				goto return_failure;
@@ -216,8 +216,8 @@ void cmusfm_cache_submit(scrobbler_session_t *sbs) {
 			}
 
 			debug("Cache: %s - %s (%s) - %d. %s (%ds)",
-					sb_tinf.artist, sb_tinf.album, sb_tinf.album_artist,
-					sb_tinf.track_number, sb_tinf.track, sb_tinf.duration);
+			      sb_tinf.artist, sb_tinf.album, sb_tinf.album_artist,
+			      sb_tinf.track_number, sb_tinf.track, sb_tinf.duration);
 
 			/* submit tracks to Last.fm */
 			scrobbler_scrobble(sbs, &sb_tinf);
@@ -243,6 +243,6 @@ return_failure:
 }
 
 /* Helper function for retrieving cmusfm cache file. */
-char *get_cmusfm_cache_file(void) {
+char * get_cmusfm_cache_file(void) {
 	return get_cmus_home_file(CACHE_FNAME);
 }
