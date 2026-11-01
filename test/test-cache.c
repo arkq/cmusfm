@@ -1,6 +1,6 @@
 /*
  * cmusfm - test-cache.c
- * SPDX-FileCopyrightText: 2015-2024 Arkadiusz Bokowy and contributors
+ * SPDX-FileCopyrightText: 2015-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../src/cache.c"
-#include "../src/utils.c"
+#include "../src/cache.h"
+#include "../src/utils.h"
 
 /* global variable used in the cache code */
 const char * cmusfm_cache_file;

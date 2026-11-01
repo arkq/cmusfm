@@ -1,6 +1,6 @@
 /*
  * cmusfm - cmusfm.h
- * SPDX-FileCopyrightText: 2010-2024 Arkadiusz Bokowy and contributors
+ * SPDX-FileCopyrightText: 2010-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -10,8 +10,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "config.h"
-#include "libscrobbler2.h"
+#include "cmusfm-config.h"
 
 
 #define CONFIG_FNAME "cmusfm.conf"
@@ -61,31 +60,5 @@ struct cmtrack_info {
 	int duration;
 
 };
-
-
-enum format_match_type {
-	CMFORMAT_NUMBER = 'N',
-	CMFORMAT_ARTIST = 'A',
-	CMFORMAT_ALBUM = 'B',
-	CMFORMAT_TITLE = 'T',
-};
-#define FORMAT_MATCH_TYPE_COUNT 4
-
-struct format_match {
-	enum format_match_type type;
-	const char * data;
-	size_t len;
-};
-
-
-char * get_cmus_home_dir(void);
-char * get_cmus_home_file(const char * file);
-int mkdirp(const char * dir, mode_t mode);
-int make_data_hash(const void * data, size_t len);
-#if ENABLE_LIBNOTIFY
-char * get_album_cover_file(const char * location, const char * format);
-#endif
-struct format_match * get_regexp_format_matches(const char * str, const char * format);
-struct format_match * get_regexp_match(struct format_match * matches, enum format_match_type type);
 
 #endif

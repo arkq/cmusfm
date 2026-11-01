@@ -2,14 +2,13 @@
  * cmusfm - test-server.inc
  * vim: ft=c
  *
- * SPDX-FileCopyrightText: 2015-2024 Arkadiusz Bokowy and contributors
+ * SPDX-FileCopyrightText: 2015-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  */
 
 #include "../src/cmusfm.h"
 #include "../src/server.c"
-#include "../src/utils.c"
 
 /* global variables used in the server code */
 unsigned char SC_api_key[16] = { 0 };

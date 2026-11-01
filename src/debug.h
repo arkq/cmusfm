@@ -8,12 +8,11 @@
 #define CMUSFM_DEBUG_H_
 
 #if HAVE_CONFIG_H
-# include "../config.h"
+# include "config.h"
 #endif
 
-#include <stdio.h>
-
 #if DEBUG
+# include <stdio.h>
 # define debug(M, ARGS ...) fprintf(stderr, "DEBUG %s:%d: " M "\n", __FILE__, __LINE__, ## ARGS)
 #else
 # define debug(M, ARGS ...) do {} while (0)

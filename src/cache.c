@@ -1,11 +1,11 @@
 /*
  * cmusfm - cache.c
- * SPDX-FileCopyrightText: 2014-2024 Arkadiusz Bokowy and contributors
+ * SPDX-FileCopyrightText: 2014-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 #if HAVE_CONFIG_H
-# include "../config.h"
+# include "config.h"
 #endif
 
 #include "cache.h"
@@ -18,7 +18,7 @@
 
 #include "cmusfm.h"
 #include "debug.h"
-
+#include "utils.h"
 
 /* Return the actual size of the given cache record structure. */
 static size_t get_cache_record_size(const struct cmusfm_cache_record * record) {
@@ -171,7 +171,7 @@ void cmusfm_cache_submit(scrobbler_session_t * sbs) {
 			    record->checksum1 != get_cache_record_checksum1(record)) {
 				fprintf(stderr, "ERROR: Invalid cache record signature\n");
 				debug("Signature: %x, checksum: %x", record->signature, record->checksum1);
-				goto return_failure;
+				goto failure;
 			}
 
 			record_size = get_cache_record_size(record);
@@ -184,7 +184,7 @@ void cmusfm_cache_submit(scrobbler_session_t * sbs) {
 			/* check for second-stage data integration */
 			if (record->checksum2 != get_cache_record_checksum2(record)) {
 				fprintf(stderr, "ERROR: Cache record data corrupted\n");
-				goto return_failure;
+				goto failure;
 			}
 
 			/* restore scrobbler track info structure from cache */
@@ -232,7 +232,7 @@ void cmusfm_cache_submit(scrobbler_session_t * sbs) {
 			fseek(f, ((char *)record - rd_buff) - rd_len, SEEK_CUR);
 	}
 
-return_failure:
+failure:
 
 	fclose(f);
 
@@ -240,9 +240,4 @@ return_failure:
 	 * keeping invalid file will result in an inability to submit tracks later
 	 * - there is no validity check upon cache creation. */
 	unlink(cmusfm_cache_file);
-}
-
-/* Helper function for retrieving cmusfm cache file. */
-char * get_cmusfm_cache_file(void) {
-	return get_cmus_home_file(CACHE_FNAME);
 }

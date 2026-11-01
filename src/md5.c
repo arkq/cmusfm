@@ -39,7 +39,7 @@
  */
 
 #if HAVE_CONFIG_H
-# include "../config.h"
+# include "config.h"
 #endif
 
 #ifdef WITH_SYSTEM_MD5

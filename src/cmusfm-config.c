@@ -1,10 +1,10 @@
 /*
  * cmusfm - config.c
- * SPDX-FileCopyrightText: 2014-2024 Arkadiusz Bokowy and contributors
+ * SPDX-FileCopyrightText: 2014-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "config.h"
+#include "cmusfm-config.h"
 
 #include <ctype.h>
 #include <fcntl.h>
@@ -17,7 +17,6 @@
 #endif
 
 #include "cmusfm.h"
-
 
 /* Return the pointer to the configuration value substring. This function
  * strips all white-spaces and optional quotation marks. */
@@ -171,8 +170,3 @@ int cmusfm_config_add_watch(int fd) {
 	return inotify_add_watch(fd, cmusfm_config_file, IN_MODIFY | IN_ONESHOT);
 }
 #endif
-
-/* Helper function for retrieving cmusfm configuration file. */
-char * get_cmusfm_config_file(void) {
-	return get_cmus_home_file(CONFIG_FNAME);
-}

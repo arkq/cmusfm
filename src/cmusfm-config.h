@@ -1,6 +1,6 @@
 /*
  * cmusfm - config.h
- * SPDX-FileCopyrightText: 2014-2024 Arkadiusz Bokowy and contributors
+ * SPDX-FileCopyrightText: 2014-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -8,7 +8,7 @@
 #define CMUSFM_CONFIG_H_
 
 #if HAVE_CONFIG_H
-# include "../config.h"
+# include "config.h"
 #endif
 
 #include <stdbool.h>
@@ -55,8 +55,6 @@ struct cmusfm_config {
 
 };
 
-
-char * get_cmusfm_config_file(void);
 int cmusfm_config_read(const char * fname, struct cmusfm_config * conf);
 int cmusfm_config_write(const char * fname, struct cmusfm_config * conf);
 #if HAVE_SYS_INOTIFY_H

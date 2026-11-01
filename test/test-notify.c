@@ -1,10 +1,13 @@
 /*
  * cmusfm - test-notify.c
- * SPDX-FileCopyrightText: 2015-2024 Arkadiusz Bokowy and contributors
+ * SPDX-FileCopyrightText: 2015-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "../src/notify.c"
+#include <stdlib.h>
+#include <unistd.h>
+
+#include "../src/notify.h"
 
 int main(void) {
 

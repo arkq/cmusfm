@@ -1,11 +1,11 @@
 /*
  * cmusfm - server.c
- * SPDX-FileCopyrightText: 2010-2024 Arkadiusz Bokowy and contributors
+ * SPDX-FileCopyrightText: 2010-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 #if HAVE_CONFIG_H
-# include "../config.h"
+# include "config.h"
 #endif
 
 #include "server.h"
@@ -28,8 +28,9 @@
 
 #include "cache.h"
 #include "cmusfm.h"
-#include "config.h"
+#include "cmusfm-config.h"
 #include "debug.h"
+#include "utils.h"
 
 #if ENABLE_LIBNOTIFY
 # include "notify.h"
@@ -453,19 +454,19 @@ int cmusfm_server_send_track(struct cmtrack_info * tinfo) {
 			}
 		}
 
-		match = get_regexp_match(matches, CMFORMAT_ARTIST);
-		strncpy(artist, match->data, size < match->len ? size : match->len);
+		if ((match = get_regexp_match(matches, CMFORMAT_ARTIST)) != NULL)
+			strncpy(artist, match->data, size < match->len ? size : match->len);
 		album_artist = &artist[strlen(artist) + 1];
 		album = &album_artist[strlen(album_artist) + 1];
 		size -= album - artist - 2;
 
-		match = get_regexp_match(matches, CMFORMAT_ALBUM);
-		strncpy(album, match->data, size < match->len ? size : match->len);
+		if ((match = get_regexp_match(matches, CMFORMAT_ALBUM)) != NULL)
+			strncpy(album, match->data, size < match->len ? size : match->len);
 		title = &album[strlen(album) + 1];
 		size -= title - album - 1;
 
-		match = get_regexp_match(matches, CMFORMAT_TITLE);
-		strncpy(title, match->data, size < match->len ? size : match->len);
+		if ((match = get_regexp_match(matches, CMFORMAT_TITLE)) != NULL)
+			strncpy(title, match->data, size < match->len ? size : match->len);
 
 		free(matches);
 
@@ -533,9 +534,4 @@ fail:
 	close(sock);
 	errno = err;
 	return -1;
-}
-
-/* Helper function for retrieving server socket file. */
-char * get_cmusfm_socket_file(void) {
-	return get_cmus_home_file(SOCKET_FNAME);
 }

@@ -1,14 +1,12 @@
 /*
  * cmusfm - main.c
- * SPDX-FileCopyrightText: 2010-2024 Arkadiusz Bokowy and contributors
+ * SPDX-FileCopyrightText: 2010-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 #if HAVE_CONFIG_H
-# include "../config.h"
+# include "config.h"
 #endif
-
-#include "cmusfm.h"
 
 #include <errno.h>
 #include <spawn.h>
@@ -19,11 +17,12 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "cache.h"
-#include "config.h"
+#include "cmusfm.h"
+#include "cmusfm-config.h"
 #include "debug.h"
+#include "libscrobbler2.h"
 #include "server.h"
-
+#include "utils.h"
 
 /* Last.fm API key for cmusfm. */
 unsigned char SC_api_key[16] = {

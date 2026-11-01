@@ -1,14 +1,19 @@
 /*
  * cmusfm - server.h
- * SPDX-FileCopyrightText: 2014-2024 Arkadiusz Bokowy and contributors
+ * SPDX-FileCopyrightText: 2014-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 #ifndef CMUSFM_SERVER_H_
 #define CMUSFM_SERVER_H_
 
-#include "cmusfm.h"
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
 
+#include <stdint.h>
+
+#include "cmusfm.h"
 
 /* communication socket buffer size */
 #define CMSOCKET_BUFFER_SIZE 1024
@@ -48,10 +53,8 @@ struct cmusfm_data_record {
 
 };
 
-
 int cmusfm_server_check(void);
 int cmusfm_server_start(void);
 int cmusfm_server_send_track(struct cmtrack_info * tinfo);
-char * get_cmusfm_socket_file(void);
 
 #endif

@@ -50,10 +50,13 @@ configure_file(
 	${PROJECT_SOURCE_DIR}/config.h.in
 	${PROJECT_BINARY_DIR}/config.h)
 
+add_definitions(-DHAVE_CONFIG_H)
+include_directories(${PROJECT_BINARY_DIR})
+
 add_library(
 	cmusfmcore STATIC
 	src/cache.c
-	src/config.c
+	src/cmusfm-config.c
 	src/libscrobbler2.c
 	src/server.c
 	src/utils.c)
@@ -82,7 +85,8 @@ if(BUILD_TESTING)
 		test-server-notify
 		test-server-submit01
 		test-server-submit02
-		test-server-submit03)
+		test-server-submit03
+		test-utils)
 
 	if(ENABLE_LIBNOTIFY)
 		list(APPEND TESTS test-notify)

@@ -1,11 +1,15 @@
 /*
  * cmusfm - cache.h
- * SPDX-FileCopyrightText: 2014-2024 Arkadiusz Bokowy and contributors
+ * SPDX-FileCopyrightText: 2014-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 #ifndef CMUSFM_CACHE_H_
 #define CMUSFM_CACHE_H_
+
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <stdint.h>
 
@@ -45,6 +49,5 @@ struct __attribute__ ((__packed__)) cmusfm_cache_record {
 
 void cmusfm_cache_update(const scrobbler_trackinfo_t * sb_tinf);
 void cmusfm_cache_submit(scrobbler_session_t * sbs);
-char * get_cmusfm_cache_file(void);
 
 #endif

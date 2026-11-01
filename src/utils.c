@@ -1,29 +1,29 @@
 /*
  * cmusfm - utils.c
- * SPDX-FileCopyrightText: 2014-2024 Arkadiusz Bokowy and contributors
+ * SPDX-FileCopyrightText: 2014-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 #if HAVE_CONFIG_H
-# include "../config.h"
+# include "config.h"
 #endif
 
-#include "cmusfm.h"
+#include "utils.h"
 
 #include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #if ENABLE_LIBNOTIFY
 # include <dirent.h>
 # include <libgen.h>
 #endif
 
+#include "cmusfm.h"
 #include "debug.h"
 
-
-/* Helper function for retrieving cmus configuration home path. */
 char * get_cmus_home_dir(void) {
 
 	const char cmusdir[] = "/cmus";
@@ -47,9 +47,9 @@ char * get_cmus_home_dir(void) {
 	return strdup(cmusdir);
 }
 
-/* Helper function for retrieving a path for given file inside the cmus
- * configuration home path. */
-char * get_cmus_home_file(const char * file) {
+/**
+ * Get a path for a given file inside the cmus home directory. */
+static char * get_cmus_home_file(const char * file) {
 
 	char * home;
 	char * fullpath;
@@ -62,11 +62,18 @@ char * get_cmus_home_file(const char * file) {
 	return fullpath;
 }
 
-/* This function is an extension for the standard mkdir() one. It will try to
- * recursively create given directory in the same fashion like the `mkdir -p`
- * *nix command. On success it returns zero, or -1 if an error occurred. In
- * the latter case, the state of the directory structure is undefined - this
- * function does not provide self clean-up. */
+char * get_cmusfm_config_file(void) {
+	return get_cmus_home_file(CONFIG_FNAME);
+}
+
+char * get_cmusfm_cache_file(void) {
+	return get_cmus_home_file(CACHE_FNAME);
+}
+
+char * get_cmusfm_socket_file(void) {
+	return get_cmus_home_file(SOCKET_FNAME);
+}
+
 int mkdirp(const char * dir, mode_t mode) {
 
 	char * tmp = strdup(dir);
@@ -88,7 +95,6 @@ int mkdirp(const char * dir, mode_t mode) {
 	return mkdir(dir, mode);
 }
 
-/* Simple and fast "hashing" function. */
 int make_data_hash(const void * data, size_t len) {
 	int hash;
 	for (size_t x = hash = 0; x < len; x++)
@@ -97,10 +103,6 @@ int make_data_hash(const void * data, size_t len) {
 }
 
 #if ENABLE_LIBNOTIFY
-/* Return an album cover file based on the current location. Location should
- * be either a local file name or an URL. When cover file can not be found,
- * NULL is returned (URL case, or when coverfile ERE match failed). In case
- * of wild-card match, the first match is returned. */
 char * get_album_cover_file(const char * location, const char * format) {
 
 	static char fname[256];
@@ -167,15 +169,6 @@ char * get_album_cover_file(const char * location, const char * format) {
 }
 #endif
 
-/* Get track information substrings from the given string. Matching is done
- * using the provided format string, which should be an ERE-based pattern with
- * customized placeholders. A placeholder is defined as a marked subexpression
- * with the ?X marker, where the X can be one the following characters:
- *   A - artist, B - album, T - title, N - track number
- *   e.g.: ^(?A.+) - (?N[:digits:]+)\. (?T.+)$
- * In order to get a single match structure, one should use get_regexp_match()
- * function. When something goes wrong, NULL is returned. Memory for matches
- * is obtained with malloc(), and can be freed with free() function. */
 struct format_match * get_regexp_format_matches(const char * str, const char * format) {
 #define MATCHES_SIZE FORMAT_MATCH_TYPE_COUNT + 1
 
@@ -219,17 +212,14 @@ struct format_match * get_regexp_format_matches(const char * str, const char * f
 		matches[i - 1].data = &str[regmatch[i].rm_so];
 		matches[i - 1].len = regmatch[i].rm_eo - regmatch[i].rm_so;
 	}
+
 	return matches;
 }
 
-/* Return a pointer to the single format match structure with the given
- * match type. */
 struct format_match * get_regexp_match(struct format_match * matches,
 		enum format_match_type type) {
-	while (matches->type) {
+	for (; matches->type; matches++)
 		if (matches->type == type)
-			break;
-		matches++;
-	}
-	return matches;
+			return matches;
+	return NULL;
 }
