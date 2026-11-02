@@ -12,6 +12,7 @@
 #endif
 
 #include <sys/types.h>
+#include <time.h>
 
 /* The number of defined match types. */
 #define FORMAT_MATCH_TYPE_COUNT 4
@@ -73,6 +74,13 @@ char * get_cmusfm_cache_file(void);
 /**
  * Get a path for the cmusfm socket file. */
 char * get_cmusfm_socket_file(void);
+
+/**
+ * Get the current time as a Unix timestamp.
+ *
+ * This function has a weak definition, so it can be overridden by tests to provide a way to
+ * control the flow of time. */
+time_t get_current_unix_time(void);
 
 /**
  * Extension for the standard mkdir() function.

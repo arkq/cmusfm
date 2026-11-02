@@ -7,6 +7,9 @@
  *
  */
 
+#include <pthread.h>
+#include <time.h>
+
 #include "../src/cmusfm.h"
 #include "../src/server.c"
 
@@ -17,39 +20,123 @@ struct cmusfm_config config = { 0 };
 const char * cmusfm_config_file = NULL;
 const char * cmusfm_socket_file = NULL;
 
-/* mock subscription subsystem - with the invocation counter */
-scrobbler_trackinfo_t scrobbler_scrobble_sbt = { 0 };
-int scrobbler_scrobble_count = 0;
+/**
+ * Variable for tracking the current virtual time. */
+static time_t virtual_clock_now = SERVICE_RETRY_DELAY + 42;
+
+/**
+ * Non-weak implementation to get the current virtual time. */
+time_t get_current_unix_time(void) { return virtual_clock_now; }
+
+/**
+ * Sleep for the given number of seconds in virtual time. */
+void virtual_sleep(unsigned int sec) { virtual_clock_now += sec; }
+
+/**
+ * Redirect standard sleep to the virtual clock sleep. */
+#define sleep(s) virtual_sleep(s)
+
+static pthread_mutex_t server_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t server_cond = PTHREAD_COND_INITIALIZER;
+static bool server_ready = false;
+
+/**
+ * Non-weak implementation to notify that the server is ready. */
+void cmusfm_server_ready(void) {
+	pthread_mutex_lock(&server_mutex);
+	server_ready = true;
+	pthread_mutex_unlock(&server_mutex);
+	pthread_cond_broadcast(&server_cond);
+}
+
+static scrobbler_trackinfo_t scrobble_sbt = { 0 };
+static unsigned int scrobble_count = 0;
+
+/**
+ * Mock subscription subsystem - with the invocation counter. */
 scrobbler_status_t scrobbler_scrobble(scrobbler_session_t * sbs, scrobbler_trackinfo_t * sbt) {
 	(void)sbs;
-	memcpy(&scrobbler_scrobble_sbt, sbt, sizeof(scrobbler_scrobble_sbt));
-	scrobbler_scrobble_count++;
+	pthread_mutex_lock(&server_mutex);
+	memcpy(&scrobble_sbt, sbt, sizeof(scrobble_sbt));
+	scrobble_count++;
+	pthread_mutex_unlock(&server_mutex);
+	pthread_cond_broadcast(&server_cond);
 	return SCROBBLER_STATUS_OK;
 }
 
-/* mock now-playing subsystem - with the invocation counter */
-scrobbler_trackinfo_t scrobbler_update_now_playing_sbt = { 0 };
-int scrobbler_update_now_playing_count = 0;
+static scrobbler_trackinfo_t now_playing_sbt = { 0 };
+static unsigned int now_playing_count = 0;
+
+/**
+ * Mock now-playing subsystem - with the invocation counter. */
 scrobbler_status_t scrobbler_update_now_playing(scrobbler_session_t * sbs,
 		scrobbler_trackinfo_t * sbt) {
 	(void)sbs;
-	memcpy(&scrobbler_update_now_playing_sbt, sbt, sizeof(scrobbler_update_now_playing_sbt));
-	scrobbler_update_now_playing_count++;
+	pthread_mutex_lock(&server_mutex);
+	memcpy(&now_playing_sbt, sbt, sizeof(now_playing_sbt));
+	now_playing_count++;
+	pthread_mutex_unlock(&server_mutex);
+	pthread_cond_broadcast(&server_cond);
 	return SCROBBLER_STATUS_OK;
 }
 
-/* mock notification subsystem - with the invocation counter */
-scrobbler_trackinfo_t cmusfm_notify_show_sbt = { 0 };
-int cmusfm_notify_show_count = 0;
+static scrobbler_trackinfo_t notify_show_sbt = { 0 };
+static unsigned int notify_show_count = 0;
+
+/**
+ * Mock notification subsystem - with the invocation counter. */
 void cmusfm_notify_show(const scrobbler_trackinfo_t * sbt, const char * icon) {
 	(void)icon;
-	memcpy(&scrobbler_update_now_playing_sbt, sbt, sizeof(scrobbler_update_now_playing_sbt));
-	memcpy(&cmusfm_notify_show_sbt, sbt, sizeof(cmusfm_notify_show_sbt));
-	cmusfm_notify_show_count++;
+	pthread_mutex_lock(&server_mutex);
+	memcpy(&notify_show_sbt, sbt, sizeof(notify_show_sbt));
+	notify_show_count++;
+	pthread_mutex_unlock(&server_mutex);
+	pthread_cond_broadcast(&server_cond);
 }
 
-/* helper function for updating data record checksum fields */
-void cmusfm_server_update_record_checksum(struct cmusfm_data_record * record) {
+/**
+ * Wait until the server is ready to accept connections. */
+int wait_for_cmusfm_server(unsigned int timeout) {
+
+	struct timespec ts;
+	int rv = 0;
+
+	clock_gettime(CLOCK_REALTIME, &ts);
+	ts.tv_sec += timeout;
+
+	pthread_mutex_lock(&server_mutex);
+	while (!server_ready && rv == 0)
+		rv = pthread_cond_timedwait(&server_cond, &server_mutex, &ts);
+	pthread_mutex_unlock(&server_mutex);
+
+	return rv == 0 ? 0 : -1;
+}
+
+static unsigned int now_playing_wait_count = 0;
+
+/**
+ * Wait until the now-playing mock was invoked or the timeout expired. */
+int wait_for_now_playing_update(unsigned int timeout) {
+
+	struct timespec ts;
+	int rv = 0;
+
+	clock_gettime(CLOCK_REALTIME, &ts);
+	ts.tv_sec += timeout;
+
+	pthread_mutex_lock(&server_mutex);
+	while (now_playing_count <= now_playing_wait_count && rv == 0)
+		rv = pthread_cond_timedwait(&server_cond, &server_mutex, &ts);
+	pthread_mutex_unlock(&server_mutex);
+
+	if (rv == 0)
+		now_playing_wait_count = now_playing_count;
+
+	return rv == 0 ? 0 : -1;
+}
+
+/* Helper function for updating data record check sums. */
+void cmusfm_data_record_update_checksum(struct cmusfm_data_record * record) {
 	record->checksum1 = make_record_checksum1(record);
 	record->checksum2 = make_record_checksum2(record);
 }

@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #if ENABLE_LIBNOTIFY
 # include <dirent.h>
@@ -23,6 +24,14 @@
 
 #include "cmusfm.h"
 #include "debug.h"
+
+__attribute__ ((weak))
+void cmusfm_server_ready(void) {}
+
+__attribute__ ((weak))
+time_t get_current_unix_time(void) {
+	return time(NULL);
+}
 
 char * get_cmus_home_dir(void) {
 

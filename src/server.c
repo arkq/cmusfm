@@ -141,7 +141,7 @@ static void cmusfm_server_process_data(scrobbler_session_t * sbs,
 
 	/* test connection to server (on failure try again in some time) */
 	if (scrobbler_fail_time != 0 &&
-	    time(NULL) - scrobbler_fail_time > SERVICE_RETRY_DELAY) {
+	    get_current_unix_time() - scrobbler_fail_time > SERVICE_RETRY_DELAY) {
 		if (scrobbler_test_session_key(sbs) == 0) {  /* everything should be OK now */
 			scrobbler_fail_time = 0;
 
@@ -149,14 +149,14 @@ static void cmusfm_server_process_data(scrobbler_session_t * sbs,
 			cmusfm_cache_submit(sbs);
 		}
 		else
-			scrobbler_fail_time = time(NULL);
+			scrobbler_fail_time = get_current_unix_time();
 	}
 
 	/* User is playing a new track or the status has changed for the previous
 	 * one. In both cases we should check if the track should be submitted. */
 	if (checksum2 != saved_record->checksum2) {
 action_submit:
-		playtime += time(NULL) - unpaused;
+		playtime += get_current_unix_time() - unpaused;
 
 		/* Track should be submitted if it is longer than 30 seconds and it has
 		 * been played for at least half its duration (play time is greater than
@@ -168,13 +168,18 @@ action_submit:
 			set_trackinfo(&sb_tinf, saved_record);
 			sb_tinf.timestamp = started;
 
-			if (sb_tinf.duration <= 30)
+			if (sb_tinf.duration <= 30) {
+				debug("Skipping submission: Track duration is too short: %ds", sb_tinf.duration);
 				goto action_submit_skip;
+			}
 
-			if ((saved_is_radio && !config.submit_shoutcast) ||
-			    (!saved_is_radio && !config.submit_localfile)) {
-				/* skip submission if we don't want it */
-				debug("Submission not enabled");
+			if (saved_is_radio && !config.submit_shoutcast) {
+				debug("Skipping submission: Submission not enabled for shoutcasts");
+				goto action_submit_skip;
+			}
+
+			if (!saved_is_radio && !config.submit_localfile) {
+				debug("Skipping submission: Submission not enabled for local files");
 				goto action_submit_skip;
 			}
 
@@ -194,7 +199,7 @@ action_submit_skip:
 			started = 0;
 		else {
 			/* reinitialize variables, save track info in save_data */
-			started = unpaused = time(NULL);
+			started = unpaused = get_current_unix_time();
 			playtime = paused = 0;
 
 			if ((record->status & CMSTATUS_SHOUTCASTMASK) != 0)
@@ -217,7 +222,7 @@ action_nowplaying:
 					                   get_album_cover_file(get_record_location(record),
 					                                        config.format_coverfile));
 				else
-					debug("Notification not enabled");
+					debug("Skipping notification: Not enabled");
 #endif
 
 				/* update now-playing indicator */
@@ -228,7 +233,7 @@ action_nowplaying:
 							scrobbler_fail_time = 1;
 					}
 					else
-						debug("Now playing not enabled");
+						debug("Skipping now-playing: Not enabled");
 				}
 
 			}
@@ -239,7 +244,7 @@ action_nowplaying:
 			goto action_submit;
 
 		if (status == CMSTATUS_PAUSED) {
-			paused = time(NULL);
+			paused = get_current_unix_time();
 			playtime += paused - unpaused;
 		}
 
@@ -249,7 +254,7 @@ action_nowplaying:
 		 *       case track is played again, so we should submit previous play. */
 		if (status == CMSTATUS_PLAYING) {
 			if (paused) {
-				unpaused = time(NULL);
+				unpaused = get_current_unix_time();
 				pausedtime = unpaused - paused;
 				paused = 0;
 				if (pausedtime > 120)
@@ -343,6 +348,8 @@ int cmusfm_server_start(void) {
 	pfds[2].fd = inotify_init();
 	cmusfm_config_add_watch(pfds[2].fd);
 #endif
+
+	cmusfm_server_ready();
 
 	debug("Entering server main loop");
 	while (server_on) {

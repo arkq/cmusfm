@@ -83,23 +83,21 @@ if(BUILD_TESTING)
 	set(TESTS
 		test-cache
 		test-server-notify
-		test-server-submit01
-		test-server-submit02
-		test-server-submit03
+		test-server-now-playing
+		test-server-submit
 		test-utils)
 
 	if(ENABLE_LIBNOTIFY)
 		list(APPEND TESTS test-notify)
 	endif()
 
+	find_package(Threads REQUIRED)
+
 	foreach(TEST IN ITEMS ${TESTS})
 		add_executable("${TEST}" "test/${TEST}.c")
-		target_link_libraries("${TEST}" PRIVATE cmusfmcore)
+		target_link_libraries("${TEST}" PRIVATE cmusfmcore Threads::Threads)
 		add_test(NAME "${TEST}" COMMAND "${TEST}")
 	endforeach()
-
-	find_package(Threads REQUIRED)
-	target_link_libraries(test-server-submit03 PRIVATE Threads::Threads)
 
 endif()
 

@@ -53,6 +53,13 @@ struct cmusfm_data_record {
 
 };
 
+/**
+ * Hook called by the server once it is listening for clients.
+ *
+ * The default weak implementation does nothing. It is intended to be overridden by tests to
+ * signal that the server is ready to accept connections in case of multi-threaded tests. */
+void cmusfm_server_ready(void);
+
 int cmusfm_server_check(void);
 int cmusfm_server_start(void);
 int cmusfm_server_send_track(struct cmtrack_info * tinfo);
