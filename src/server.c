@@ -354,8 +354,11 @@ int cmusfm_server_start(void) {
 	debug("Entering server main loop");
 	while (server_on) {
 
-		if (poll(pfds, 3, -1) == -1)
-			break; /* signal interruption */
+		if (poll(pfds, 3, -1) == -1) {
+			if (errno == SIGINT)
+				continue;
+			break;
+		}
 
 		if (pfds[0].revents & POLLIN) {
 			pfds[1].fd = accept(pfds[0].fd, NULL, NULL);

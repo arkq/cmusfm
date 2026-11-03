@@ -9,14 +9,58 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <check.h>
+
 #include "../src/notify.h"
 
-int main(int argc, char * argv[]) {
+START_TEST(test_notify_show_null) {
+	scrobbler_trackinfo_t info = { 0 };
+	cmusfm_notify_show(&info, NULL);
+}
 
-	/* The delay between notifications. This can be customized via the command
-	 * line argument in order to see all notifications clearly (notifications
-	 * are displayed on the screen if the notification daemon is running). */
-	unsigned int delay = 0;
+START_TEST(test_notify_show_empty) {
+	scrobbler_trackinfo_t info = {
+		.mb_track_id = "",
+		.artist = "",
+		.album_artist = "",
+		.album = "",
+		.track = "",
+	};
+	cmusfm_notify_show(&info, NULL);
+}
+
+START_TEST(test_notify_show_full) {
+	scrobbler_trackinfo_t info = {
+		.mb_track_id = "b2181aae-5cba-496c-bb0c-b4cc0109ebf8",
+		.artist = "The Beatles",
+		.album_artist = "The Beatles",
+		.album = "Revolver",
+		.track_number = 6,
+		.track = "Yellow Submarine",
+		.duration = 161,
+		.timestamp = 1444444444,
+	};
+	cmusfm_notify_show(&info, NULL);
+}
+
+START_TEST(test_notify_show_no_track_info) {
+	scrobbler_trackinfo_t info = {
+		.album_artist = "The Beatles",
+		.album = "Revolver",
+	};
+	cmusfm_notify_show(&info, NULL);
+}
+
+/* The delay between notifications. This can be customized via the command
+ * line argument in order to see all notifications clearly (notifications
+ * are displayed on the screen if the notification daemon is running). */
+static unsigned int delay = 0;
+
+static void tc_setup_delay(void) { sleep(delay); }
+
+static void tc_teardown_notify(void) { cmusfm_notify_free(); }
+
+int main(int argc, char * argv[]) {
 
 	int opt;
 	const char * opts = "hd:";
@@ -39,38 +83,21 @@ int main(int argc, char * argv[]) {
 			return EXIT_FAILURE;
 		}
 
-	scrobbler_trackinfo_t track_null = { 0 };
-	scrobbler_trackinfo_t track_empty = {
-		.mb_track_id = "",
-		.artist = "",
-		.album_artist = "",
-		.album = "",
-		.track = "",
-	};
-	scrobbler_trackinfo_t track_full = {
-		.mb_track_id = "b2181aae-5cba-496c-bb0c-b4cc0109ebf8",
-		.artist = "The Beatles",
-		.album_artist = "The Beatles",
-		.album = "Revolver",
-		.track_number = 6,
-		.track = "Yellow Submarine",
-		.duration = 161,
-		.timestamp = 1444444444,
-	};
-	scrobbler_trackinfo_t track_no_track = {
-		.album_artist = "The Beatles",
-		.album = "Revolver",
-	};
+	Suite * s = suite_create(__FILE__);
+	TCase * tc = tcase_create(__FILE__);
+	SRunner * sr = srunner_create(s);
 
-	cmusfm_notify_show(&track_null, NULL);
-	sleep(delay);
-	cmusfm_notify_show(&track_empty, NULL);
-	sleep(delay);
-	cmusfm_notify_show(&track_full, NULL);
-	sleep(delay);
-	cmusfm_notify_show(&track_no_track, NULL);
-	sleep(delay);
+	suite_add_tcase(s, tc);
+	tcase_add_checked_fixture(tc, tc_setup_delay, tc_teardown_notify);
 
-	cmusfm_notify_free();
-	return EXIT_SUCCESS;
+	tcase_add_test(tc, test_notify_show_null);
+	tcase_add_test(tc, test_notify_show_empty);
+	tcase_add_test(tc, test_notify_show_full);
+	tcase_add_test(tc, test_notify_show_no_track_info);
+
+	srunner_run_all(sr, CK_ENV);
+	int nf = srunner_ntests_failed(sr);
+
+	srunner_free(sr);
+	return nf == 0 ? 0 : 1;
 }

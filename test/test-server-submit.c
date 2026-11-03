@@ -4,18 +4,15 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <assert.h>
-#include <stdlib.h>
+#include <check.h>
 
 #define DEBUG_SKIP_HICCUP
 #include "test-server.inc"
 
-static char track_buffer[512];
-static struct cmusfm_data_record * track = (struct cmusfm_data_record *)track_buffer;
+static char buffer[4096];
+static struct cmusfm_data_record * track = (struct cmusfm_data_record *)buffer;
 
-static void test_30_seconds_threshold(void) {
-
-	scrobble_count = 0;
+START_TEST(test_30_seconds_threshold) {
 
 	track->status = CMSTATUS_PLAYING;
 	track->duration = 30;
@@ -27,7 +24,7 @@ static void test_30_seconds_threshold(void) {
 	sleep(track->duration);
 
 	cmusfm_server_process_data(NULL, track);
-	assert(scrobble_count == 0);
+	ck_assert_int_eq(scrobble_count, 0);
 
 	/* It was overplayed (due to seeking) but it's still 30-seconds track. */
 	sleep(track->duration + 10);
@@ -36,13 +33,11 @@ static void test_30_seconds_threshold(void) {
 	cmusfm_data_record_update_checksum(track);
 
 	cmusfm_server_process_data(NULL, track);
-	assert(scrobble_count == 0);
+	ck_assert_int_eq(scrobble_count, 0);
 
 }
 
-static void test_4_minutes_threshold(void) {
-
-	scrobble_count = 0;
+START_TEST(test_4_minutes_threshold) {
 
 	track->status = CMSTATUS_PLAYING;
 	track->duration = 4 * 60 * 5;
@@ -57,13 +52,11 @@ static void test_4_minutes_threshold(void) {
 	cmusfm_data_record_update_checksum(track);
 
 	cmusfm_server_process_data(NULL, track);
-	assert(scrobble_count == 1);
+	ck_assert_int_eq(scrobble_count, 1);
 
 }
 
-static void test_half_duration_threshold(void) {
-
-	scrobble_count = 0;
+START_TEST(test_half_duration_threshold) {
 
 	track->status = CMSTATUS_PLAYING;
 	track->duration = 35;
@@ -80,7 +73,7 @@ static void test_half_duration_threshold(void) {
 	cmusfm_data_record_update_checksum(track);
 
 	cmusfm_server_process_data(NULL, track);
-	assert(scrobble_count == 1);
+	ck_assert_int_eq(scrobble_count, 1);
 
 	/* Track was played for less than half its duration. */
 	sleep(track->duration / 2 - 1);
@@ -89,9 +82,11 @@ static void test_half_duration_threshold(void) {
 	cmusfm_data_record_update_checksum(track);
 
 	cmusfm_server_process_data(NULL, track);
-	assert(scrobble_count == 1);
+	ck_assert_int_eq(scrobble_count, 1);
 
 }
+
+static void tc_setup(void) { scrobble_count = 0; }
 
 int main(void) {
 
@@ -111,9 +106,20 @@ int main(void) {
 	config.submit_localfile = true;
 	config.submit_shoutcast = true;
 
-	test_30_seconds_threshold();
-	test_4_minutes_threshold();
-	test_half_duration_threshold();
+	Suite * s = suite_create(__FILE__);
+	TCase * tc = tcase_create(__FILE__);
+	SRunner * sr = srunner_create(s);
 
-	return EXIT_SUCCESS;
+	suite_add_tcase(s, tc);
+	tcase_add_checked_fixture(tc, tc_setup, NULL);
+
+	tcase_add_test(tc, test_30_seconds_threshold);
+	tcase_add_test(tc, test_4_minutes_threshold);
+	tcase_add_test(tc, test_half_duration_threshold);
+
+	srunner_run_all(sr, CK_ENV);
+	int nf = srunner_ntests_failed(sr);
+
+	srunner_free(sr);
+	return nf == 0 ? 0 : 1;
 }

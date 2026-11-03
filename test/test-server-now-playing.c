@@ -4,77 +4,65 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <assert.h>
 #include <pthread.h>
 #include <stdlib.h>
+
+#include <check.h>
 
 #define DEBUG_SKIP_HICCUP
 #include "test-server.inc"
 
-void * cmusfm_server_worker(void * arg) {
-	(void)arg;
-	cmusfm_server_start();
-	return NULL;
-}
+START_TEST(test_track_minimum) {
 
-pthread_t server_thread;
-void cmusfm_server_cleanup(int sig) {
-	(void)sig;
-	pthread_kill(server_thread, SIGTERM);
-	pthread_join(server_thread, NULL);
-}
+	struct cmtrack_info track = { .status = CMSTATUS_PLAYING };
 
-int test_track_minimum(void) {
+	ck_assert_int_eq(cmusfm_server_send_track(&track), 0);
+	ck_assert_int_eq(wait_for_now_playing_update(5), 0);
+	ck_assert_uint_eq(now_playing_count, 1);
 
-	struct cmtrack_info track = {
-		.status = CMSTATUS_PLAYING,
-	};
+	ck_assert_ptr_null(now_playing_sbt.mb_track_id);
+	ck_assert_ptr_null(now_playing_sbt.artist);
+	ck_assert_ptr_null(now_playing_sbt.album_artist);
+	ck_assert_ptr_null(now_playing_sbt.album);
+	ck_assert_int_eq(now_playing_sbt.track_number, 0);
+	ck_assert_ptr_null(now_playing_sbt.track);
+	ck_assert_int_eq(now_playing_sbt.duration, 180);
 
-	cmusfm_server_send_track(&track);
-
-	assert(wait_for_now_playing_update(5) == 0);
-	assert(now_playing_sbt.mb_track_id == NULL);
-	assert(now_playing_sbt.artist == NULL);
-	assert(now_playing_sbt.album_artist == NULL);
-	assert(now_playing_sbt.album == NULL);
-	assert(now_playing_sbt.track_number == 0);
-	assert(now_playing_sbt.track == NULL);
-	assert(now_playing_sbt.duration == 180);
-
-	/* check case where artist is present */
+	/* Check case where artist is present. */
 	track.artist = "The Beatles";
 	track.album_artist = NULL;
 	track.title = "Yellow Submarine";
 
-	cmusfm_server_send_track(&track);
+	ck_assert_int_eq(cmusfm_server_send_track(&track), 0);
+	ck_assert_int_eq(wait_for_now_playing_update(5), 0);
+	ck_assert_uint_eq(now_playing_count, 2);
 
-	assert(wait_for_now_playing_update(5) == 0);
-	assert(now_playing_sbt.mb_track_id == NULL);
-	assert(strcmp(now_playing_sbt.artist, "The Beatles") == 0);
-	assert(now_playing_sbt.album_artist == NULL);
-	assert(now_playing_sbt.album == NULL);
-	assert(now_playing_sbt.track_number == 0);
-	assert(strcmp(now_playing_sbt.track, "Yellow Submarine") == 0);
+	ck_assert_ptr_null(now_playing_sbt.mb_track_id);
+	ck_assert_str_eq(now_playing_sbt.artist, "The Beatles");
+	ck_assert_ptr_null(now_playing_sbt.album_artist);
+	ck_assert_ptr_null(now_playing_sbt.album);
+	ck_assert_int_eq(now_playing_sbt.track_number, 0);
+	ck_assert_str_eq(now_playing_sbt.track, "Yellow Submarine");
 
-	/* check case where artist is missing but album artist is present */
+	/* Check case where artist is missing but album artist is present. */
 	track.artist = NULL;
 	track.album_artist = "The Beatles";
 	track.title = "Yellow Submarine";
 
-	cmusfm_server_send_track(&track);
+	ck_assert_int_eq(cmusfm_server_send_track(&track), 0);
+	ck_assert_int_eq(wait_for_now_playing_update(5), 0);
+	ck_assert_uint_eq(now_playing_count, 3);
 
-	assert(wait_for_now_playing_update(5) == 0);
-	assert(now_playing_sbt.mb_track_id == NULL);
-	assert(strcmp(now_playing_sbt.artist, "The Beatles") == 0);
-	assert(strcmp(now_playing_sbt.album_artist, "The Beatles") == 0);
-	assert(now_playing_sbt.album == NULL);
-	assert(now_playing_sbt.track_number == 0);
-	assert(strcmp(now_playing_sbt.track, "Yellow Submarine") == 0);
+	ck_assert_ptr_null(now_playing_sbt.mb_track_id);
+	ck_assert_str_eq(now_playing_sbt.artist, "The Beatles");
+	ck_assert_str_eq(now_playing_sbt.album_artist, "The Beatles");
+	ck_assert_ptr_null(now_playing_sbt.album);
+	ck_assert_int_eq(now_playing_sbt.track_number, 0);
+	ck_assert_str_eq(now_playing_sbt.track, "Yellow Submarine");
 
-	return 3;
 }
 
-int test_track_full(void) {
+START_TEST(test_track_full) {
 
 	struct cmtrack_info track = {
 		.status = CMSTATUS_PLAYING,
@@ -90,48 +78,47 @@ int test_track_full(void) {
 		.duration = 160,
 	};
 
-	cmusfm_server_send_track(&track);
+	ck_assert_int_eq(cmusfm_server_send_track(&track), 0);
+	ck_assert_int_eq(wait_for_now_playing_update(5), 0);
+	ck_assert_uint_eq(now_playing_count, 1);
 
-	assert(wait_for_now_playing_update(5) == 0);
-	assert(strcmp(now_playing_sbt.mb_track_id, track.mb_track_id) == 0);
-	assert(strcmp(now_playing_sbt.artist, track.artist) == 0);
-	assert(strcmp(now_playing_sbt.album_artist, track.album_artist) == 0);
-	assert(strcmp(now_playing_sbt.album, track.album) == 0);
-	assert(now_playing_sbt.track_number == track.track_number);
-	assert(strcmp(now_playing_sbt.track, track.title) == 0);
-	assert(now_playing_sbt.duration == track.duration);
+	ck_assert_str_eq(now_playing_sbt.mb_track_id, track.mb_track_id);
+	ck_assert_str_eq(now_playing_sbt.artist, track.artist);
+	ck_assert_str_eq(now_playing_sbt.album_artist, track.album_artist);
+	ck_assert_str_eq(now_playing_sbt.album, track.album);
+	ck_assert_int_eq(now_playing_sbt.track_number, track.track_number);
+	ck_assert_str_eq(now_playing_sbt.track, track.title);
+	ck_assert_int_eq(now_playing_sbt.duration, track.duration);
 
-	return 1;
 }
 
-int test_track_parse_file_name(void) {
+START_TEST(test_track_parse_file_name) {
 
 	struct cmtrack_info track = {
 		.status = CMSTATUS_PLAYING,
 		.file = "Unknown - Submarine.ogg",
 	};
 
-	cmusfm_server_send_track(&track);
+	ck_assert_int_eq(cmusfm_server_send_track(&track), 0);
+	ck_assert_int_eq(wait_for_now_playing_update(5), 0);
+	ck_assert_uint_eq(now_playing_count, 1);
 
-	assert(wait_for_now_playing_update(5) == 0);
-	assert(now_playing_sbt.mb_track_id == NULL);
-	assert(strcmp(now_playing_sbt.artist, "Unknown") == 0);
-	assert(now_playing_sbt.album_artist == NULL);
-	assert(now_playing_sbt.album == NULL);
-	assert(now_playing_sbt.track_number == 0);
-	assert(strcmp(now_playing_sbt.track, "Submarine") == 0);
-	assert(now_playing_sbt.duration == 180);
+	ck_assert_ptr_null(now_playing_sbt.mb_track_id);
+	ck_assert_str_eq(now_playing_sbt.artist, "Unknown");
+	ck_assert_ptr_null(now_playing_sbt.album_artist);
+	ck_assert_ptr_null(now_playing_sbt.album);
+	ck_assert_int_eq(now_playing_sbt.track_number, 0);
+	ck_assert_str_eq(now_playing_sbt.track, "Submarine");
+	ck_assert_int_eq(now_playing_sbt.duration, 180);
 
-	return 1;
 }
 
-int test_out_of_bounds_write(void) {
+START_TEST(test_out_of_bounds_write) {
 
 	char buffer[CMSOCKET_BUFFER_SIZE / 3] = { 0 };
-	size_t i;
 
-	/* fill buffer with printable characters */
-	for (i = 0; i < sizeof(buffer) - 1; i++)
+	/* Fill buffer with printable characters. */
+	for (size_t i = 0; i < sizeof(buffer) - 1; i++)
 		buffer[i] = '0' + (i % ('z' - '0'));
 
 	struct cmtrack_info track = {
@@ -141,59 +128,82 @@ int test_out_of_bounds_write(void) {
 		.title = buffer,
 	};
 
-	cmusfm_server_send_track(&track);
+	ck_assert_int_eq(cmusfm_server_send_track(&track), 0);
+	ck_assert_int_eq(wait_for_now_playing_update(5), 0);
+	ck_assert_uint_eq(now_playing_count, 1);
 
-	assert(wait_for_now_playing_update(5) == 0);
-	assert(strlen(now_playing_sbt.artist) == 340 /* sizeof(buffer) - 1 */);
-	assert(strlen(now_playing_sbt.album) == 340 /* sizeof(buffer) - 1 */);
-	assert(strlen(now_playing_sbt.track) == 314);
+	ck_assert_int_eq(strlen(now_playing_sbt.artist), 340 /* sizeof(buffer) - 1 */);
+	ck_assert_int_eq(strlen(now_playing_sbt.album), 340 /* sizeof(buffer) - 1 */);
+	ck_assert_int_eq(strlen(now_playing_sbt.track), 314);
 
 	char tmp[CMSOCKET_BUFFER_SIZE] = { 0 };
 	snprintf(tmp, sizeof(tmp), "%s%s - %s", buffer, buffer, buffer);
 
-	/* check overrun for long URL */
+	/* Check overrun for long URL. */
 	track.url = "example.com";
 	track.artist = NULL;
 	track.title = tmp;
 
-	cmusfm_server_send_track(&track);
+	ck_assert_int_eq(cmusfm_server_send_track(&track), 0);
+	ck_assert_int_eq(wait_for_now_playing_update(5), 0);
+	ck_assert_uint_eq(now_playing_count, 2);
 
-	assert(wait_for_now_playing_update(5) == 0);
-	assert(strlen(now_playing_sbt.artist) == 680 /* 2 * (sizeof(buffer) - 1) */);
-	assert(strlen(now_playing_sbt.track) == 314);
+	ck_assert_int_eq(strlen(now_playing_sbt.artist), 680 /* 2 * (sizeof(buffer) - 1) */);
+	ck_assert_int_eq(strlen(now_playing_sbt.track), 314);
 
-	return 2;
+}
+
+static pthread_t server_thread;
+
+static void * server_worker(void * arg) {
+	(void)arg;
+	ck_assert_int_eq(cmusfm_server_start(), 0);
+	return NULL;
+}
+
+static void tc_setup_server(void) {
+
+	now_playing_wait_count = 0;
+	now_playing_count = 0;
+
+	server_on = true;
+	pthread_create(&server_thread, NULL, server_worker, NULL);
+	ck_assert_int_eq(wait_for_cmusfm_server(5), 0);
+
+}
+
+static void tc_teardown_server(void) {
+	pthread_kill(server_thread, SIGTERM);
+	pthread_join(server_thread, NULL);
+	server_ready = false;
 }
 
 int main(void) {
 
-	/* place communication socket in the current directory */
+	/* Place communication socket in the current directory. */
 	cmusfm_socket_file = tempnam(".", "tmp-");
-	/* use "%artist - %title[.ext]" format for name parser */
+	/* Use "%artist - %title[.ext]" format for name parser. */
 	strcpy(config.format_localfile, "^(?A.+) - (?T.+)\\.[^.]+$");
 	strcpy(config.format_shoutcast, "^(?A.+) - (?T.+)$");
-	/* for the sake of speed we will check now-playing events */
+
 	config.nowplaying_localfile = true;
 	config.nowplaying_shoutcast = true;
 
-	pthread_create(&server_thread, NULL, cmusfm_server_worker, NULL);
-	assert(wait_for_cmusfm_server(5) == 0);
+	Suite * s = suite_create(__FILE__);
+	TCase * tc = tcase_create(__FILE__);
+	SRunner * sr = srunner_create(s);
 
-	/* register cleanup routine - in the case of assert() termination */
-	struct sigaction sigact = { .sa_handler = cmusfm_server_cleanup };
-	sigaction(SIGABRT, &sigact, NULL);
+	suite_add_tcase(s, tc);
+	tcase_add_checked_fixture(tc, tc_setup_server, tc_teardown_server);
 
-	unsigned int count = 0;
+	tcase_add_test(tc, test_track_minimum);
+	tcase_add_test(tc, test_track_full);
+	tcase_add_test(tc, test_track_parse_file_name);
+	tcase_add_test(tc, test_out_of_bounds_write);
 
-	count += test_track_minimum();
-	assert(now_playing_count == count);
-	count += test_track_full();
-	assert(now_playing_count == count);
-	count += test_track_parse_file_name();
-	assert(now_playing_count == count);
-	count += test_out_of_bounds_write();
-	assert(now_playing_count == count);
+	srunner_run_all(sr, CK_ENV);
+	int nf = srunner_ntests_failed(sr);
 
-	cmusfm_server_cleanup(0);
-	return EXIT_SUCCESS;
+	srunner_free(sr);
+	return nf == 0 ? 0 : 1;
 }

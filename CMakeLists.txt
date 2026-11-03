@@ -92,10 +92,12 @@ if(BUILD_TESTING)
 	endif()
 
 	find_package(Threads REQUIRED)
+	pkg_check_modules(Check REQUIRED IMPORTED_TARGET check>=0.13)
 
 	foreach(TEST IN ITEMS ${TESTS})
 		add_executable("${TEST}" "test/${TEST}.c")
-		target_link_libraries("${TEST}" PRIVATE cmusfmcore Threads::Threads)
+		target_link_libraries("${TEST}" PRIVATE cmusfmcore)
+		target_link_libraries("${TEST}" PRIVATE PkgConfig::Check Threads::Threads)
 		add_test(NAME "${TEST}" COMMAND "${TEST}")
 	endforeach()
 

@@ -9,7 +9,8 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+
+  check:
     strategy:
       matrix:
         features:
@@ -23,12 +24,46 @@ jobs:
         uses: gerlero/apt-install@v1
         with:
           packages: >
+            check
             libcurl4-openssl-dev
             libnotify-dev
             python3-docutils
       - name: Configure CMake
-        run: cmake -S . -B build -DBUILD_TESTING=ON ${{ matrix.features }}
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            ${{ matrix.features }}
       - name: Build
         run: cmake --build build --parallel
       - name: Run Tests
-        run: ctest --test-dir build --parallel --output-on-failure
+        working-directory: ${{ github.workspace }}/build
+        run: ctest --output-on-failure
+
+  sanitize:
+    runs-on: ubuntu-latest
+    env:
+      ASAN_OPTIONS: detect_stack_use_after_return=1
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Dependencies
+        uses: gerlero/apt-install@v1
+        with:
+          packages: >
+            check
+            libcurl4-openssl-dev
+            libnotify-dev
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
+            -DBUILD_TESTING=ON \
+            -DENABLE_LIBNOTIFY=ON \
+            -DENABLE_DEBUG=ON
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Run Tests
+        working-directory: ${{ github.workspace }}/build
+        run: ctest --output-on-failure

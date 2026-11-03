@@ -4,60 +4,74 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <assert.h>
 #include <stdlib.h>
-#include <string.h>
+
+#include <check.h>
 
 #include "../src/utils.h"
 
-static void test_regexp_matches(void) {
+START_TEST(test_regexp_matches) {
 
 	const char * str = "Queen - 07. Bohemian Rhapsody";
 	struct format_match * matches;
 	struct format_match * m;
 
 	matches = get_regexp_format_matches(str, "^(?A.+) - (?N[0-9]+)\\. (?T.+)$");
-	assert(matches != NULL);
+	ck_assert_ptr_nonnull(matches);
 
-	m = get_regexp_match(matches, CMFORMAT_ARTIST);
-	assert(m != NULL && m->len == 5 && strncmp(m->data, "Queen", m->len) == 0);
+	ck_assert_ptr_nonnull(m = get_regexp_match(matches, CMFORMAT_ARTIST));
+	ck_assert_mem_eq(m->data, "Queen", 5);
+	ck_assert_uint_eq(m->len, 5);
 
-	m = get_regexp_match(matches, CMFORMAT_NUMBER);
-	assert(m != NULL && m->len == 2 && strncmp(m->data, "07", m->len) == 0);
+	ck_assert_ptr_nonnull(m = get_regexp_match(matches, CMFORMAT_NUMBER));
+	ck_assert_mem_eq(m->data, "07", 2);
+	ck_assert_uint_eq(m->len, 2);
 
-	m = get_regexp_match(matches, CMFORMAT_TITLE);
-	assert(m != NULL && m->len == 17 && strncmp(m->data, "Bohemian Rhapsody", m->len) == 0);
+	ck_assert_ptr_nonnull(m = get_regexp_match(matches, CMFORMAT_TITLE));
+	ck_assert_mem_eq(m->data, "Bohemian Rhapsody", 17);
+	ck_assert_uint_eq(m->len, 17);
 
 	/* The format has no album placeholder. */
-	assert(get_regexp_match(matches, CMFORMAT_ALBUM) == NULL);
+	ck_assert_ptr_null(get_regexp_match(matches, CMFORMAT_ALBUM));
 
 	free(matches);
-
 }
 
-static void test_regexp_no_match(void) {
+START_TEST(test_regexp_no_match) {
 	/* Invalid regular expression. */
-	assert(get_regexp_format_matches("abc", "^(?A.+") == NULL);
+	ck_assert_ptr_null(get_regexp_format_matches("abc", "^(?A.+"));
 	/* String does not match the pattern. */
-	assert(get_regexp_format_matches("no separator", "^(?A.+) - (?T.+)$") == NULL);
+	ck_assert_ptr_null(get_regexp_format_matches("no separator", "^(?A.+) - (?T.+)$"));
 }
 
-static void test_regexp_match_empty_list(void) {
+START_TEST(test_regexp_match_empty_list) {
 
 	const char * str = "abc";
 	struct format_match * matches;
 
 	matches = get_regexp_format_matches(str, "^abc$");
-	assert(matches != NULL);
+	ck_assert_ptr_nonnull(matches);
 
-	assert(get_regexp_match(matches, CMFORMAT_ARTIST) == NULL);
+	ck_assert_ptr_null(get_regexp_match(matches, CMFORMAT_ARTIST));
 
 	free(matches);
 }
 
 int main(void) {
-	test_regexp_matches();
-	test_regexp_no_match();
-	test_regexp_match_empty_list();
-	return EXIT_SUCCESS;
+
+	Suite * s = suite_create(__FILE__);
+	TCase * tc = tcase_create(__FILE__);
+	SRunner * sr = srunner_create(s);
+
+	suite_add_tcase(s, tc);
+
+	tcase_add_test(tc, test_regexp_matches);
+	tcase_add_test(tc, test_regexp_no_match);
+	tcase_add_test(tc, test_regexp_match_empty_list);
+
+	srunner_run_all(sr, CK_ENV);
+	int nf = srunner_ntests_failed(sr);
+
+	srunner_free(sr);
+	return nf == 0 ? 0 : 1;
 }
