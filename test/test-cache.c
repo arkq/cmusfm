@@ -57,7 +57,7 @@ START_TEST(test_cache) {
 	ck_assert_ptr_nonnull(f = fopen(cmusfm_cache_file, "r"));
 	/* Make sure the structure of the cache file is not changed. */
 	ck_assert_int_eq(size = fread(buffer, 1, sizeof(buffer), f), 158);
-	ck_assert_int_eq(make_data_hash(buffer, size), 856388);
+	ck_assert_uint_eq(mem2hash(buffer, size), 856388);
 	fclose(f);
 
 	cmusfm_cache_submit(NULL);
@@ -66,6 +66,10 @@ START_TEST(test_cache) {
 	/* Cache file should have been removed after the submission. */
 	ck_assert_ptr_null(fopen(cmusfm_cache_file, "r"));
 	ck_assert_int_eq(errno, ENOENT);
+
+	/* Calling submit cache without cache file should not crash. */
+	cmusfm_cache_submit(NULL);
+	ck_assert_int_eq(scrobble_count, 3);
 
 }
 

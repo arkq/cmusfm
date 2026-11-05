@@ -17,6 +17,7 @@ include(GNUInstallDirs)
 find_package(PkgConfig REQUIRED)
 
 option(ENABLE_DEBUG "Enable debugging support." OFF)
+option(ENABLE_COVERAGE "Enable code coverage instrumentation." OFF)
 option(ENABLE_LIBNOTIFY "Enable desktop notification support." OFF)
 option(ENABLE_MANPAGES "Build and install the man page." OFF)
 
@@ -82,6 +83,7 @@ if(BUILD_TESTING)
 
 	set(TESTS
 		test-cache
+		test-config
 		test-server-notify
 		test-server-now-playing
 		test-server-submit
@@ -100,6 +102,34 @@ if(BUILD_TESTING)
 		target_link_libraries("${TEST}" PRIVATE PkgConfig::Check Threads::Threads)
 		add_test(NAME "${TEST}" COMMAND "${TEST}")
 	endforeach()
+
+endif()
+
+if(ENABLE_COVERAGE)
+
+	find_program(LCOV lcov REQUIRED)
+	find_program(GENHTML genhtml REQUIRED)
+
+	target_compile_options(cmusfmcore PUBLIC --coverage -g)
+	target_link_options(cmusfmcore PUBLIC --coverage)
+
+	add_custom_target(
+		coverage
+		COMMAND ${LCOV} --capture --initial --branch-coverage
+			--directory ${CMAKE_BINARY_DIR} --exclude /usr/* --exclude */test/*
+			--output-file baseline.info
+		COMMAND ${LCOV} --capture --parallel --branch-coverage
+			--directory ${CMAKE_BINARY_DIR} --exclude /usr/* --exclude */test/*
+			--ignore-errors inconsistent,unused
+			--output-file runtime.info
+		COMMAND ${LCOV} --branch-coverage
+			--add-tracefile baseline.info --add-tracefile runtime.info
+			--ignore-errors inconsistent,unused
+			--output-file lcov.info
+		COMMAND ${GENHTML} -o coverage -t ${PROJECT_NAME} --branch-coverage
+			--ignore-errors inconsistent,unused
+			lcov.info
+		VERBATIM)
 
 endif()
 

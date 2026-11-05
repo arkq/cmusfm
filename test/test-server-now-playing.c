@@ -1,6 +1,6 @@
 /*
- * cmusfm - test-server-submit03.c
- * SPDX-FileCopyrightText: 2015-2024 Arkadiusz Bokowy and contributors
+ * cmusfm - test-server-now-playing.c
+ * SPDX-FileCopyrightText: 2015-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -11,6 +11,10 @@
 
 #define DEBUG_SKIP_HICCUP
 #include "test-server.inc"
+
+START_TEST(test_server_check) {
+	ck_assert_int_eq(cmusfm_server_check(), 1);
+}
 
 START_TEST(test_track_minimum) {
 
@@ -196,6 +200,7 @@ int main(void) {
 	suite_add_tcase(s, tc);
 	tcase_add_checked_fixture(tc, tc_setup_server, tc_teardown_server);
 
+	tcase_add_test(tc, test_server_check);
 	tcase_add_test(tc, test_track_minimum);
 	tcase_add_test(tc, test_track_full);
 	tcase_add_test(tc, test_track_parse_file_name);

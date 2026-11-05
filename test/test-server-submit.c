@@ -1,6 +1,6 @@
 /*
- * cmusfm - test-server-submit01.c
- * SPDX-FileCopyrightText: 2015-2024 Arkadiusz Bokowy and contributors
+ * cmusfm - test-server-submit.c
+ * SPDX-FileCopyrightText: 2015-2026 Arkadiusz Bokowy and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -11,6 +11,13 @@
 
 static char buffer[4096];
 static struct cmusfm_data_record * track = (struct cmusfm_data_record *)buffer;
+
+START_TEST(test_server_check) {
+	/* Check function expects the socket variable to be define. */
+	cmusfm_socket_file = "/dev/null";
+	/* This unit test does not start the server. */
+	ck_assert_int_ne(cmusfm_server_check(), 1);
+}
 
 START_TEST(test_30_seconds_threshold) {
 
@@ -113,6 +120,7 @@ int main(void) {
 	suite_add_tcase(s, tc);
 	tcase_add_checked_fixture(tc, tc_setup, NULL);
 
+	tcase_add_test(tc, test_server_check);
 	tcase_add_test(tc, test_30_seconds_threshold);
 	tcase_add_test(tc, test_4_minutes_threshold);
 	tcase_add_test(tc, test_half_duration_threshold);

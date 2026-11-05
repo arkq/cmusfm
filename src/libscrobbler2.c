@@ -6,7 +6,6 @@
 
 #include "libscrobbler2.h"
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +14,7 @@
 
 #include "debug.h"
 #include "md5.c"
+#include "utils.h"
 
 /**
  * Convenient macro for getting "on the stack" array size. */
@@ -44,8 +44,6 @@ struct sb_response_data {
 	char * data;
 	int size;
 };
-
-static char * mem2hex(char * dest, const unsigned char * mem, size_t n);
 
 /* CURL write callback function. */
 static size_t sb_curl_write_callback(char * ptr, size_t size, size_t nmemb, void * data) {
@@ -595,22 +593,4 @@ const char * scrobbler_strerror(scrobbler_session_t * sbs) {
 	default:
 		return "Unknown status";
 	}
-}
-
-/* Dump memory pointed by the mem into the dest string in the hexadecimal
- * format. Note, that the dest has to be big enough to contain 2 * n with
- * termination NULL character. */
-char * mem2hex(char * dest, const unsigned char * mem, size_t n) {
-
-	const char hexchars[] = "0123456789abcdef";
-	char * ptr = dest;
-	size_t i;
-
-	for (i = 0; i < n; i++) {
-		*(ptr++) = hexchars[(mem[i] >> 4) & 0x0f];
-		*(ptr++) = hexchars[mem[i] & 0x0f];
-	}
-	*ptr = '\0';
-
-	return dest;
 }

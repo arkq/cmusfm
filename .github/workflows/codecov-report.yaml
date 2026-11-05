@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Arkadiusz Bokowy and contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+name: Code Coverage
+
+on:
+  push:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  coverage:
+    if: github.repository_owner == 'arkq'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Dependencies
+        uses: gerlero/apt-install@v1
+        with:
+          packages: >
+            check
+            lcov
+            libcurl4-openssl-dev
+            libnotify-dev
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON \
+            -DENABLE_COVERAGE=ON \
+            -DENABLE_LIBNOTIFY=ON
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Run Tests
+        working-directory: ${{ github.workspace }}/build
+        run: ctest --output-on-failure
+      - name: Generate Coverage Report
+        working-directory: ${{ github.workspace }}/build
+        run: make coverage
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: build/lcov.info

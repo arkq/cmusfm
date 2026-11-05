@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2014-2024 Arkadiusz Bokowy and contributors
+SPDX-FileCopyrightText: 2014-2026 Arkadiusz Bokowy and contributors
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
@@ -9,6 +9,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 [![Build Status](https://github.com/arkq/cmusfm/actions/workflows/build-and-test.yaml/badge.svg)](https://github.com/arkq/cmusfm/actions/workflows/build-and-test.yaml)
 [![REUSE status](https://api.reuse.software/badge/github.com/arkq/cmusfm)](https://api.reuse.software/info/github.com/arkq/cmusfm)
+[![Code Coverage](https://codecov.io/gh/arkq/cmusfm/branch/master/graph/badge.svg)](https://app.codecov.io/gh/arkq/cmusfm)
 
 ## Features
 

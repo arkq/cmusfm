@@ -4,11 +4,86 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <check.h>
 
+#include "../src/cmusfm.h"
 #include "../src/utils.h"
+
+START_TEST(test_get_cmus_home_dir) {
+	char * s;
+	setenv("HOME", "/home/test", 1);
+	ck_assert_str_eq(s = get_cmus_home_dir(), "/home/test/.config/cmus");
+	free(s);
+}
+
+START_TEST(test_get_cmus_home_dir_xdg) {
+	char * s;
+	setenv("XDG_CONFIG_HOME", "/config", 1);
+	ck_assert_str_eq(s = get_cmus_home_dir(), "/config/cmus");
+	free(s);
+}
+
+START_TEST(test_get_cmusfm_cache_file) {
+	char * s;
+	ck_assert_str_eq(s = get_cmusfm_cache_file(), "/cmus/" CACHE_FNAME);
+	free(s);
+}
+
+START_TEST(test_get_cmusfm_config_file) {
+	char * s;
+	ck_assert_str_eq(s = get_cmusfm_config_file(), "/cmus/" CONFIG_FNAME);
+	free(s);
+}
+
+START_TEST(test_get_cmusfm_socket_file) {
+	char * s;
+	ck_assert_str_eq(s = get_cmusfm_socket_file(), "/cmus/" SOCKET_FNAME);
+	free(s);
+}
+
+START_TEST(test_mkdirp) {
+
+	/* Check if passing empty string does not crash. */
+	ck_assert_int_eq(mkdirp("", 0755), -1);
+	ck_assert_int_eq(errno, EINVAL);
+
+	ck_assert_int_eq(mkdirp("tmp/test/dir", 0755), 0);
+	/* Check that the directory was created. */
+	ck_assert_int_eq(access("tmp/test/dir", F_OK), 0);
+
+	/* Check that function does not fail when the directory already exists. */
+	ck_assert_int_eq(mkdirp("tmp/test/dir", 0755), 0);
+
+	ck_assert_int_eq(rmdir("tmp/test/dir"), 0);
+	ck_assert_int_eq(rmdir("tmp/test"), 0);
+	ck_assert_int_eq(rmdir("tmp"), 0);
+
+}
+
+START_TEST(test_mkdirp_long_path) {
+
+	char path[PATH_MAX + 1];
+	memset(path, 'a', sizeof(path) - 1);
+	path[sizeof(path) - 1] = '\0';
+
+	ck_assert_int_eq(mkdirp(path, 0755), -1);
+	ck_assert_int_eq(errno, ENAMETOOLONG);
+
+}
+
+START_TEST(test_mem2hash) {
+	ck_assert_uint_eq(mem2hash("test", 4), 1127);
+}
+
+START_TEST(test_mem2hex) {
+	char buffer[9];
+	ck_assert_str_eq(mem2hex(buffer, "test", 4), "74657374");
+}
 
 START_TEST(test_regexp_matches) {
 
@@ -57,6 +132,11 @@ START_TEST(test_regexp_match_empty_list) {
 	free(matches);
 }
 
+static void tc_setup(void) {
+	unsetenv("HOME");
+	unsetenv("XDG_CONFIG_HOME");
+}
+
 int main(void) {
 
 	Suite * s = suite_create(__FILE__);
@@ -64,7 +144,17 @@ int main(void) {
 	SRunner * sr = srunner_create(s);
 
 	suite_add_tcase(s, tc);
+	tcase_add_checked_fixture(tc, tc_setup, NULL);
 
+	tcase_add_test(tc, test_get_cmus_home_dir);
+	tcase_add_test(tc, test_get_cmus_home_dir_xdg);
+	tcase_add_test(tc, test_get_cmusfm_cache_file);
+	tcase_add_test(tc, test_get_cmusfm_config_file);
+	tcase_add_test(tc, test_get_cmusfm_socket_file);
+	tcase_add_test(tc, test_mkdirp);
+	tcase_add_test(tc, test_mkdirp_long_path);
+	tcase_add_test(tc, test_mem2hash);
+	tcase_add_test(tc, test_mem2hex);
 	tcase_add_test(tc, test_regexp_matches);
 	tcase_add_test(tc, test_regexp_no_match);
 	tcase_add_test(tc, test_regexp_match_empty_list);

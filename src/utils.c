@@ -10,6 +10,8 @@
 
 #include "utils.h"
 
+#include <errno.h>
+#include <limits.h>
 #include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -85,30 +87,56 @@ char * get_cmusfm_socket_file(void) {
 
 int mkdirp(const char * dir, mode_t mode) {
 
-	char * tmp = strdup(dir);
-	char * p = tmp;
-	size_t len;
+	char tmp[PATH_MAX];
+	size_t len = strlen(dir);
 
-	len = strlen(tmp);
-	if (tmp[len - 1] == '/')
-		tmp[len - 1] = '\0';
+	if (len == 0) {
+		errno = EINVAL;
+		return -1;
+	}
 
-	for (; *p; p++)
+	if (len > sizeof(tmp) - 1) {
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+
+	strcpy(tmp, dir);
+	for (char * p = tmp + 1; *p; p++)
+		/* Try creating intermediate directories. */
 		if (*p == '/') {
 			*p = '\0';
-			mkdir(tmp, mode);
+			if (mkdir(tmp, mode) != 0 && errno != EEXIST)
+				return -1;
+			/* Restore original slash. */
 			*p = '/';
 		}
 
-	free(tmp);
-	return mkdir(dir, mode);
+	/* Make sure that final leaf directory is created. */
+	if (mkdir(dir, mode) != 0 && errno != EEXIST)
+		return -1;
+
+	return 0;
 }
 
-int make_data_hash(const void * data, size_t len) {
-	int hash;
-	for (size_t x = hash = 0; x < len; x++)
-		hash += ((unsigned char *)data)[x] * (x + 1);
+unsigned int mem2hash(const void * mem, size_t n) {
+	unsigned int hash = 0;
+	for (size_t i = 0; i < n; i++)
+		hash += ((unsigned char *)mem)[i] * (i + 1);
 	return hash;
+}
+
+char * mem2hex(char * dst, const void * mem, size_t n) {
+
+	const char hexchars[] = "0123456789abcdef";
+	char * ptr = dst;
+
+	for (size_t i = 0; i < n; i++) {
+		*(ptr++) = hexchars[(((unsigned char *)mem)[i] >> 4) & 0x0f];
+		*(ptr++) = hexchars[((unsigned char *)mem)[i] & 0x0f];
+	}
+
+	*ptr = '\0';
+	return dst;
 }
 
 #if ENABLE_LIBNOTIFY

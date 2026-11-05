@@ -92,7 +92,14 @@ int mkdirp(const char * dir, mode_t mode);
 
 /**
  * Simple and fast "hashing" function. */
-int make_data_hash(const void * data, size_t len);
+unsigned int mem2hash(const void * mem, size_t n);
+
+/**
+ * Dump memory pointed by the mem into the dst string in the hex format.
+ *
+ * Note, that the dst has to be big enough to contain 2 * n with termination NULL
+ * character. */
+char * mem2hex(char * dst, const void * mem, size_t n);
 
 #if ENABLE_LIBNOTIFY
 /**

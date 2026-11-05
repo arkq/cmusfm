@@ -30,14 +30,14 @@ static size_t get_cache_record_size(const struct cmusfm_cache_record * record) {
  * structure - segmentation-fault-safe checksum. */
 static uint8_t get_cache_record_checksum1(const struct cmusfm_cache_record * record) {
 	size_t len = sizeof(*record) - ((char *)&record->timestamp - (char *)record);
-	return make_data_hash(&record->timestamp, len);
+	return mem2hash(&record->timestamp, len);
 }
 
 /* Return the data checksum of the given cache record structure. If the
  * overall record length is compromised, we might end up dead... */
 static uint8_t get_cache_record_checksum2(const struct cmusfm_cache_record * record) {
 	size_t len = get_cache_record_size(record) - ((char *)&record->timestamp - (char *)record);
-	return make_data_hash(&record->timestamp, len);
+	return mem2hash(&record->timestamp, len);
 }
 
 /* Copy scrobbler track info into the cache record structure. Returned

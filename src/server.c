@@ -70,7 +70,7 @@ static char * get_record_location(const struct cmusfm_data_record * r) {
 /* Return the checksum for the length-invariant part of the record. */
 static uint8_t make_record_checksum1(const struct cmusfm_data_record * r) {
 	size_t len = sizeof(*r) - ((char *)&r->status - (char *)r);
-	return make_data_hash(&r->status, len);
+	return mem2hash(&r->status, len);
 }
 
 /* Return the data checksum of the given record structure. This checksum
@@ -78,7 +78,7 @@ static uint8_t make_record_checksum1(const struct cmusfm_data_record * r) {
 static uint8_t make_record_checksum2(const struct cmusfm_data_record * r) {
 	size_t len = sizeof(*r) - ((char *)&r->disc_number - (char *)r) + r->off_location +
 	             strlen(get_record_location(r));
-	return make_data_hash(&r->disc_number, len);
+	return mem2hash(&r->disc_number, len);
 }
 
 /* Copy data from the message into the scrobbler structure. */
